@@ -1,0 +1,75 @@
+/* 侧边栏全局样式 */
+
+/* 菜单项和子菜单标题 */
+.sidebar-menu .el-menu-item,
+.sidebar-menu .el-sub-menu__title {
+  color: var(--sidebar-menu-text);
+  transition: all 0.3s;
+}
+
+/* 悬停效果 */
+.sidebar-menu .el-menu-item:hover,
+.sidebar-menu .el-sub-menu__title:hover {
+  background-color: var(--sidebar-menu-hover) !important;
+  color: white;
+}
+
+/* 选中状态 - 增强选择器优先级 */
+.sidebar-menu.el-menu .el-menu-item.is-active,
+.sidebar-menu .el-menu-item.is-active,
+.el-menu.sidebar-menu .el-menu-item.is-active {
+  background-color: var(--sidebar-menu-active) !important;
+  color: white !important;
+  position: relative;
+}
+
+/* 选中状态左侧指示条 */
+.sidebar-menu .el-menu-item.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--primary-light);
+}
+
+/* 子菜单项缩进 */
+.sidebar-menu .el-sub-menu .el-menu-item {
+  padding-left: 50px !important;
+  min-width: 200px;
+}
+
+/* 子菜单背景色 */
+.sidebar-menu .el-sub-menu .el-menu {
+  background-color: var(--sidebar-bg) !important;
+}
+
+.sidebar-menu .el-sub-menu .el-menu-item:not(.is-active) {
+  background-color: var(--sidebar-bg) !important;
+}
+
+/* 子菜单项悬停效果 */
+.sidebar-menu .el-sub-menu .el-menu-item:not(.is-active):hover {
+  background-color: var(--sidebar-menu-hover) !important;
+  color: white !important;
+}
+
+/* 子菜单选中状态 - 增强选择器优先级 */
+.sidebar-menu .el-sub-menu .el-menu .el-menu-item.is-active,
+.sidebar-menu .el-sub-menu .el-menu-item.is-active,
+.sidebar-menu.el-menu .el-sub-menu .el-menu-item.is-active {
+  background-color: var(--sidebar-menu-active) !important;
+  color: white !important;
+}
+
+/* 折叠状态下隐藏文字 */
+.sidebar-menu.el-menu--collapse .el-sub-menu__title span,
+.sidebar-menu.el-menu--collapse .el-menu-item span {
+  display: none;
+}
+
+/* 折叠状态下隐藏箭头 */
+.sidebar-menu.el-menu--collapse .el-sub-menu__icon-arrow {
+  display: none;
+}

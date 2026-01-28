@@ -1,0 +1,59 @@
+/* 主题颜色变量 */
+:root {
+  /* 主色调 - 现代蓝紫色 */
+  --primary-color: #6366f1;
+  --primary-light: #818cf8;
+  --primary-dark: #4f46e5;
+
+  /* 侧边栏 - 深色主题 */
+  --sidebar-bg: #1e293b;
+  --sidebar-logo-bg: #0f172a;
+  --sidebar-menu-text: #cbd5e1;
+  --sidebar-menu-hover: #334155;
+  --sidebar-menu-active: #6366f1;
+
+  /* 顶部导航 */
+  --header-bg: #ffffff;
+  --header-border: #e2e8f0;
+
+  /* 标签页 */
+  --tags-bg: #f8fafc;
+  --tags-border: #e2e8f0;
+  --tags-item-bg: #ffffff;
+  --tags-item-border: #cbd5e1;
+  --tags-item-active-bg: #6366f1;
+  --tags-item-active-color: #ffffff;
+
+  /* 内容区域 */
+  --content-bg: #f1f5f9;
+
+  /* 卡片 */
+  --card-bg: #ffffff;
+  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  --card-shadow-hover: 0 4px 12px 0 rgba(0, 0, 0, 0.15);
+
+  /* 文字颜色 */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+
+  /* 边框 */
+  --border-color: #e2e8f0;
+  --border-color-light: #f1f5f9;
+
+  /* 成功色 */
+  --success-color: #10b981;
+  --success-light: #34d399;
+
+  /* 警告色 */
+  --warning-color: #f59e0b;
+  --warning-light: #fbbf24;
+
+  /* 危险色 */
+  --danger-color: #ef4444;
+  --danger-light: #f87171;
+
+  /* 信息色 */
+  --info-color: #3b82f6;
+  --info-light: #60a5fa;
+}
