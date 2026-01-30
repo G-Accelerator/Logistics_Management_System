@@ -71,16 +71,6 @@ export const asyncRoutes: AppRouteRecordRaw[] = [
           noCache: true,
         },
       },
-      {
-        path: "/order/detail/:id",
-        name: "OrderDetail",
-        component: () => import("../../views/order/OrderDetail/index.vue"),
-        meta: {
-          title: "订单详情",
-          icon: "View",
-          hidden: true,
-        },
-      },
     ],
   },
   {

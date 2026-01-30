@@ -10,6 +10,13 @@
       :operations="operations"
       :operation-width="180"
     />
+
+    <!-- 地图弹窗 -->
+    <MapDialog
+      v-model="showMapDialog"
+      :title="`订单 ${currentOrderNo} 物流路线`"
+      :points="mapPoints"
+    />
   </page-container>
 </template>
 
@@ -20,10 +27,15 @@ import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
-import { getOrders } from "../../../api/order";
+import MapDialog from "../../../components/business/MapDialog/index.vue";
+import type { MapPoint } from "../../../components/business/MapDialog/types";
+import { getOrders, getTrackPoints, deleteOrder } from "../../../api/order";
 
 const router = useRouter();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
+const showMapDialog = ref(false);
+const currentOrderNo = ref("");
+const mapPoints = ref<MapPoint[]>([]);
 
 // 搜索配置
 const searchConfig = [
@@ -113,13 +125,28 @@ const columns = [
   { prop: "createTime", label: "创建时间", width: 170 },
 ];
 
+// 查看地图
+const viewMap = async (row: any) => {
+  try {
+    currentOrderNo.value = row.orderNo;
+    const points = await getTrackPoints(row.orderNo);
+    mapPoints.value = points.map((pt, idx) => ({
+      lng: pt.lng,
+      lat: pt.lat,
+      name: pt.status,
+      address: pt.location,
+      isStart: idx === 0,
+      isEnd: idx === points.length - 1,
+    }));
+    showMapDialog.value = true;
+  } catch (e) {
+    ElMessage.error("获取站点数据失败");
+  }
+};
+
 // 操作按钮
 const operations = [
-  {
-    label: "查看",
-    type: "primary" as const,
-    handler: (row: any) => router.push(`/order/detail/${row.id}`),
-  },
+  { label: "查看地图", type: "primary" as const, handler: viewMap },
   {
     label: "编辑",
     type: "warning" as const,
@@ -135,6 +162,7 @@ const operations = [
           "提示",
           { type: "warning" },
         );
+        await deleteOrder(row.orderNo);
         ElMessage.success("删除成功");
         tableRef.value?.refresh();
       } catch {}
@@ -166,7 +194,6 @@ const loadData = async (params: any) => {
     });
     return { data: result.data, total: result.total };
   } catch (error) {
-    console.error("获取订单列表失败:", error);
     ElMessage.error("获取订单列表失败");
     return { data: [], total: 0 };
   }

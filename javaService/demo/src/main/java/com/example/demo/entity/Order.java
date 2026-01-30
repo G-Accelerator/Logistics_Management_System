@@ -1,5 +1,8 @@
 package com.example.demo.entity;
 
+import com.example.demo.dto.RoutePlanResponse.TrackPoint;
+import java.util.List;
+
 public class Order {
     private Long id;
     private String orderNo;
@@ -13,26 +16,9 @@ public class Order {
     private String receiverPhone;
     private String status;
     private String createTime;
+    private List<TrackPoint> trackPoints; // 路线站点数据
 
     public Order() {}
-
-    public Order(Long id, String orderNo, String cargoName, String cargoType, 
-                 String origin, String destination, String senderName, 
-                 String receiverName, String senderPhone, String receiverPhone,
-                 String status, String createTime) {
-        this.id = id;
-        this.orderNo = orderNo;
-        this.cargoName = cargoName;
-        this.cargoType = cargoType;
-        this.origin = origin;
-        this.destination = destination;
-        this.senderName = senderName;
-        this.receiverName = receiverName;
-        this.senderPhone = senderPhone;
-        this.receiverPhone = receiverPhone;
-        this.status = status;
-        this.createTime = createTime;
-    }
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -59,4 +45,6 @@ public class Order {
     public void setStatus(String status) { this.status = status; }
     public String getCreateTime() { return createTime; }
     public void setCreateTime(String createTime) { this.createTime = createTime; }
+    public List<TrackPoint> getTrackPoints() { return trackPoints; }
+    public void setTrackPoints(List<TrackPoint> trackPoints) { this.trackPoints = trackPoints; }
 }
