@@ -27,9 +27,11 @@ request.interceptors.request.use(
     if (config.removeEmpty !== false && config.params) {
       config.params = removeEmptyParams(config.params);
     }
-    // 可在此添加 token 等认证信息
-    // const token = localStorage.getItem('token');
-    // if (token) config.headers.Authorization = `Bearer ${token}`;
+    // 添加 token 认证信息
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => Promise.reject(error),

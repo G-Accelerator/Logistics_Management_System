@@ -13,18 +13,17 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem("token");
 
-  if (to.path === "/login") {
-    if (token) {
-      next("/dashboard");
-    } else {
-      next();
-    }
+  // 白名单路由，无需登录
+  const whiteList = ["/login", "/recruit"];
+  if (whiteList.includes(to.path)) {
+    next();
+    return;
+  }
+
+  if (token) {
+    next();
   } else {
-    if (token) {
-      next();
-    } else {
-      next("/login");
-    }
+    next("/login");
   }
 });
 

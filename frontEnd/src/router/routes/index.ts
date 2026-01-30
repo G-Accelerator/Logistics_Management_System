@@ -5,6 +5,15 @@ export type { AppRouteRecordRaw, RouteMeta } from "./types";
 // 公共路由
 export const constantRoutes: AppRouteRecordRaw[] = [
   {
+    path: "/recruit",
+    name: "RecruitList",
+    component: () => import("../../views/RecruitList/RecruitList.vue"),
+    meta: {
+      title: "招聘列表",
+      hidden: true,
+    },
+  },
+  {
     path: "/login",
     name: "Login",
     component: () => import("../../views/auth/Login/index.vue"),
