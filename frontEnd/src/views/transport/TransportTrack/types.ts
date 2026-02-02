@@ -1,5 +1,6 @@
 export interface TrackInfo {
   trackingNo: string;
+  expressCompanyName?: string;
   origin: string;
   destination: string;
   status: string;

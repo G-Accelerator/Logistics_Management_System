@@ -43,6 +43,14 @@ public class OrderController {
     }
 
     /**
+     * 获取单个订单
+     */
+    @GetMapping("/{orderNo}")
+    public Order getOrder(@PathVariable String orderNo) {
+        return orderService.getOrder(orderNo);
+    }
+
+    /**
      * 删除订单
      */
     @DeleteMapping("/{orderNo}")

@@ -12,7 +12,15 @@
                 placeholder="请输入运单号"
                 clearable
                 @keyup.enter="handleSearch"
-              />
+              >
+                <template #append>
+                  <el-button
+                    :icon="DocumentCopy"
+                    @click="pasteOrderNo"
+                    title="粘贴"
+                  />
+                </template>
+              </el-input>
             </el-form-item>
             <el-form-item>
               <el-button
@@ -22,6 +30,13 @@
               >
                 查询轨迹
               </el-button>
+              <el-button
+                :icon="Refresh"
+                :loading="loading"
+                :disabled="!trackInfo"
+                @click="handleRefresh"
+                title="刷新"
+              />
               <el-button @click="handleReset">重置</el-button>
             </el-form-item>
           </el-form>
@@ -41,6 +56,9 @@
             <el-descriptions-item label="运单号">
               {{ trackInfo.trackingNo }}
             </el-descriptions-item>
+            <el-descriptions-item label="快递公司">
+              {{ trackInfo.expressCompanyName || "-" }}
+            </el-descriptions-item>
             <el-descriptions-item label="发货地">
               {{ trackInfo.origin }}
             </el-descriptions-item>
@@ -48,10 +66,10 @@
               {{ trackInfo.destination }}
             </el-descriptions-item>
             <el-descriptions-item label="发货时间">
-              {{ trackInfo.sendTime }}
+              {{ trackInfo.sendTime || "-" }}
             </el-descriptions-item>
             <el-descriptions-item label="预计送达">
-              {{ trackInfo.estimatedTime }}
+              {{ trackInfo.estimatedTime || "-" }}
             </el-descriptions-item>
           </el-descriptions>
         </el-card>
@@ -100,15 +118,36 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted } from "vue";
 import { ElMessage } from "element-plus";
-import { ZoomIn, ZoomOut, Aim } from "@element-plus/icons-vue";
+import {
+  ZoomIn,
+  ZoomOut,
+  Aim,
+  DocumentCopy,
+  Refresh,
+} from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
+import { getOrder, getTrackPoints } from "../../../api/order";
 import type { TrackInfo, TrackPoint } from "./types";
+
+// 组件名称，用于 keep-alive 缓存
+defineOptions({ name: "TransportTrack" });
 
 export type { TrackInfo, TrackPoint } from "./types";
 
+// 快递公司映射
+const expressCompanyMap: Record<string, string> = {
+  sf: "顺丰速运",
+  zto: "中通快递",
+  yto: "圆通速递",
+  yd: "韵达快递",
+  sto: "申通快递",
+  jd: "京东物流",
+  deppon: "德邦快递",
+};
+
 // 状态
 const loading = ref(false);
-const searchForm = reactive({ trackingNo: "SHP2026000001" });
+const searchForm = reactive({ trackingNo: "" });
 const trackInfo = ref<TrackInfo | null>(null);
 const trackPoints = ref<TrackPoint[]>([]);
 
@@ -123,11 +162,42 @@ let currentMarker: any = null;
 const getStatusType = (status: string) => {
   const map: Record<string, any> = {
     pending: "warning",
-    transit: "primary",
-    delivered: "success",
-    signed: "success",
+    shipping: "primary",
+    completed: "success",
+    cancelled: "info",
   };
   return map[status] || "info";
+};
+
+// 粘贴订单号
+const pasteOrderNo = async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) {
+      searchForm.trackingNo = text.trim();
+      ElMessage.success("已粘贴");
+    }
+  } catch {
+    ElMessage.warning("无法访问剪贴板");
+  }
+};
+
+// 刷新当前查询
+const handleRefresh = () => {
+  if (searchForm.trackingNo) {
+    handleSearch();
+  }
+};
+
+// 状态文本映射
+const getStatusText = (status: string) => {
+  const map: Record<string, string> = {
+    pending: "待发货",
+    shipping: "运输中",
+    completed: "已完成",
+    cancelled: "已取消",
+  };
+  return map[status] || status;
 };
 
 // 初始化地图
@@ -158,6 +228,7 @@ const drawTrack = (points: TrackPoint[]) => {
   const pendingPoints = points.filter((p) => !p.passed);
   const currentPoint = points.find((p) => p.isCurrent);
 
+  // 绘制已通过的路线（实线）
   if (passedPoints.length > 1) {
     const passedPath = passedPoints.map((p) => [p.lng, p.lat]);
     passedPolyline = new AMap.Polyline({
@@ -171,11 +242,27 @@ const drawTrack = (points: TrackPoint[]) => {
     map.add(passedPolyline);
   }
 
-  if (pendingPoints.length > 0 && currentPoint) {
-    const pendingPath = [
-      [currentPoint.lng, currentPoint.lat],
-      ...pendingPoints.map((p) => [p.lng, p.lat]),
-    ];
+  // 绘制待通过的路线（虚线）
+  if (pendingPoints.length > 0) {
+    let pendingPath: number[][];
+    if (currentPoint) {
+      // 有当前点，从当前点开始
+      pendingPath = [
+        [currentPoint.lng, currentPoint.lat],
+        ...pendingPoints.map((p) => [p.lng, p.lat]),
+      ];
+    } else if (passedPoints.length > 0) {
+      // 没有当前点但有已通过的点，从最后一个已通过点开始
+      const lastPassed = passedPoints[passedPoints.length - 1]!;
+      pendingPath = [
+        [lastPassed.lng, lastPassed.lat],
+        ...pendingPoints.map((p) => [p.lng, p.lat]),
+      ];
+    } else {
+      // 全部都是待通过（未发货状态），显示完整路线
+      pendingPath = pendingPoints.map((p) => [p.lng, p.lat]);
+    }
+
     pendingPolyline = new AMap.Polyline({
       path: pendingPath,
       strokeColor: "#9ca3af",
@@ -238,7 +325,7 @@ const drawTrack = (points: TrackPoint[]) => {
       map.add(marker);
       markers.push(marker);
 
-      const labelText = isStart ? "发货" : "收货";
+      const labelPrefix = isStart ? "发货: " : "收货: ";
       const extraInfo =
         isEnd && point.estimatedTime
           ? `<br/><span style="font-size:9px;">预计${point.estimatedTime}</span>`
@@ -247,11 +334,12 @@ const drawTrack = (points: TrackPoint[]) => {
         position: [point.lng, point.lat],
         content: `<div style="
           background: ${color}; color: #fff;
-          padding: 3px 6px; border-radius: 3px;
-          font-size: 10px; white-space: nowrap;
-          text-align: center; line-height: 1.3;
-        ">${labelText}${extraInfo}</div>`,
-        offset: new AMap.Pixel(-15, -32),
+          padding: 4px 8px; border-radius: 4px;
+          font-size: 11px; white-space: nowrap;
+          text-align: center; line-height: 1.4;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        ">${labelPrefix}${point.location}${extraInfo}</div>`,
+        offset: new AMap.Pixel(-50, -38),
       });
       map.add(labelMarker);
       markers.push(labelMarker);
@@ -316,92 +404,126 @@ const handleSearch = async () => {
 
   loading.value = true;
   try {
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    // 获取订单信息
+    const order = await getOrder(searchForm.trackingNo);
+    if (!order) {
+      ElMessage.warning("未找到该订单");
+      return;
+    }
 
-    trackInfo.value = {
-      trackingNo: searchForm.trackingNo,
-      origin: "上海市浦东新区",
-      destination: "北京市朝阳区",
-      status: "transit",
-      statusText: "运输中",
-      sendTime: "2026-01-24 10:30:00",
-      estimatedTime: "2026-01-27 18:00:00",
+    const orderStatus = order.status || "pending";
+    const duration = order.duration || 0;
+    const createTime = order.createTime
+      ? new Date(order.createTime.replace(" ", "T"))
+      : new Date();
+
+    // 根据订单状态计算预计送达时间
+    const formatDateTime = (d: Date) => {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     };
 
-    const allPoints: TrackPoint[] = [
-      {
-        time: "2026-01-24 18:00",
-        status: "已发货",
-        location: "上海市浦东新区",
-        lng: 121.544379,
-        lat: 31.221517,
-        passed: true,
-      },
-      {
-        time: "2026-01-25 06:00",
-        status: "已到达",
-        location: "江苏省苏州市",
-        lng: 120.619585,
-        lat: 31.299379,
-        passed: true,
-      },
-      {
-        time: "2026-01-25 14:30",
-        status: "已到达",
-        location: "江苏省南京市",
-        lng: 118.767413,
-        lat: 32.041544,
-        passed: true,
-      },
-      {
-        time: "2026-01-25 22:00",
-        status: "已到达",
-        location: "安徽省合肥市",
-        lng: 117.283042,
-        lat: 31.86119,
-        passed: true,
-      },
-      {
-        time: "2026-01-26 08:15",
-        status: "已到达",
-        location: "河南省郑州市",
-        lng: 113.665412,
-        lat: 34.757975,
-        passed: true,
-      },
-      {
-        time: "2026-01-26 14:30",
-        status: "运输中",
-        location: "河北省石家庄市",
-        lng: 114.502461,
-        lat: 38.045474,
-        passed: true,
-        isCurrent: true,
-      },
-      {
-        time: "",
-        status: "待到达",
-        location: "河北省保定市",
-        lng: 115.482331,
-        lat: 38.867657,
-        passed: false,
-      },
-      {
-        time: "",
-        status: "待到达",
-        location: "北京市朝阳区",
-        lng: 116.486409,
-        lat: 39.921489,
-        passed: false,
-        estimatedTime: "01-27 18:00",
-      },
-    ];
+    // 待发货状态没有发货时间，预计送达也无法计算
+    const hasSent = orderStatus !== "pending";
+    const sendTime = hasSent ? createTime : null;
+    const estimatedArrival =
+      sendTime && duration > 0
+        ? new Date(sendTime.getTime() + duration * 1000)
+        : null;
+
+    trackInfo.value = {
+      trackingNo: order.orderNo || searchForm.trackingNo,
+      expressCompanyName:
+        expressCompanyMap[order.expressCompany || ""] || order.expressCompany,
+      origin: order.origin,
+      destination: order.destination,
+      status: orderStatus,
+      statusText: getStatusText(orderStatus),
+      sendTime: hasSent ? order.createTime || "" : "",
+      estimatedTime: estimatedArrival ? formatDateTime(estimatedArrival) : "",
+    };
+
+    // 获取站点数据
+    const points = await getTrackPoints(searchForm.trackingNo);
+
+    if (points.length === 0) {
+      ElMessage.warning("该订单暂无轨迹数据");
+      trackPoints.value = [];
+      clearTrack();
+      return;
+    }
+
+    // 根据订单状态决定物流进度
+    let progress = 0;
+    if (orderStatus === "pending") {
+      // 待发货：没有任何进度
+      progress = -1;
+    } else if (orderStatus === "completed") {
+      // 已完成：全部到达
+      progress = 1;
+    } else if (orderStatus === "shipping" && sendTime && duration > 0) {
+      // 运输中：根据时间计算进度
+      const now = new Date();
+      const elapsed = now.getTime() - sendTime.getTime();
+      progress = Math.min(elapsed / (duration * 1000), 0.99); // 最多99%，未完成
+    } else if (orderStatus === "cancelled") {
+      // 已取消：显示到取消时的进度（简化为0）
+      progress = -1;
+    }
+
+    // 根据进度确定当前站点
+    const currentIdx =
+      progress >= 0 ? Math.floor(progress * (points.length - 1)) : -1;
+
+    // 转换为地图需要的格式
+    const allPoints: TrackPoint[] = points.map((pt, idx) => {
+      const isStart = idx === 0;
+      const isEnd = idx === points.length - 1;
+
+      // 根据站点索引计算该站点的预计到达时间
+      const stationProgress = idx / (points.length - 1);
+      const stationTime =
+        sendTime && duration > 0
+          ? new Date(sendTime.getTime() + stationProgress * duration * 1000)
+          : null;
+      const stationTimeStr = stationTime ? formatDateTime(stationTime) : "";
+
+      // 判断是否已经过
+      const passed = idx <= currentIdx;
+      const isCurrent = idx === currentIdx && progress < 1;
+
+      let status: string;
+      if (isStart) {
+        status = passed ? "已发货" : "待发货";
+      } else if (isEnd) {
+        status = passed ? "已送达" : "待到达";
+      } else {
+        status = passed ? "已到达" : "待到达";
+      }
+
+      return {
+        time: passed ? stationTimeStr : "",
+        status,
+        location: pt.location,
+        lng: pt.lng,
+        lat: pt.lat,
+        passed,
+        isCurrent,
+        estimatedTime:
+          !passed && isEnd && stationTimeStr
+            ? stationTimeStr.slice(5)
+            : undefined,
+      };
+    });
 
     trackPoints.value = allPoints.filter((p) => p.passed).reverse();
     drawTrack(allPoints);
     ElMessage.success("查询成功");
-  } catch (error) {
-    ElMessage.error("查询失败");
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
+      ElMessage.warning("未找到该订单");
+    } else {
+      ElMessage.error("查询失败");
+    }
   } finally {
     loading.value = false;
   }

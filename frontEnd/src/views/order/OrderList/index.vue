@@ -24,7 +24,7 @@
 import { h, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
-import { Plus } from "@element-plus/icons-vue";
+import { Plus, DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
 import MapDialog from "../../../components/business/MapDialog/index.vue";
@@ -36,6 +36,16 @@ const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
 const showMapDialog = ref(false);
 const currentOrderNo = ref("");
 const mapPoints = ref<MapPoint[]>([]);
+
+// 复制订单号
+const copyOrderNo = async (orderNo: string) => {
+  try {
+    await navigator.clipboard.writeText(orderNo);
+    ElMessage.success("已复制");
+  } catch {
+    ElMessage.warning("复制失败");
+  }
+};
 
 // 搜索配置
 const searchConfig = [
@@ -86,29 +96,89 @@ const cargoTypeMap: Record<string, string> = {
   dangerous: "危险品",
 };
 
+// 快递公司映射
+const expressCompanyMap: Record<string, string> = {
+  sf: "顺丰速运",
+  zto: "中通快递",
+  yto: "圆通速递",
+  yd: "韵达快递",
+  sto: "申通快递",
+  jd: "京东物流",
+  deppon: "德邦快递",
+};
+
 // 表格列配置
 const columns = [
-  { prop: "orderNo", label: "订单号", width: 180, showOverflowTooltip: true },
-  { prop: "cargoName", label: "货物名称", minWidth: 120 },
+  {
+    prop: "orderNo",
+    label: "订单号",
+    width: 200,
+    render: (row: any) =>
+      h("div", { style: "display: flex; align-items: center; gap: 4px;" }, [
+        h(
+          "span",
+          { style: "overflow: hidden; text-overflow: ellipsis;" },
+          row.orderNo,
+        ),
+        h(ElButton, {
+          size: "small",
+          icon: DocumentCopy,
+          link: true,
+          onClick: (e: Event) => {
+            e.stopPropagation();
+            copyOrderNo(row.orderNo);
+          },
+        }),
+      ]),
+  },
+  { prop: "cargoName", label: "货物名称", minWidth: 100 },
   {
     prop: "cargoType",
     label: "货物类型",
-    width: 100,
+    width: 90,
     formatter: (row: any) => cargoTypeMap[row.cargoType] || row.cargoType,
   },
-  { prop: "origin", label: "起始地", minWidth: 150, showOverflowTooltip: true },
+  {
+    prop: "expressCompany",
+    label: "快递公司",
+    width: 90,
+    formatter: (row: any) =>
+      expressCompanyMap[row.expressCompany] || row.expressCompany || "-",
+  },
+  {
+    prop: "cargoWeight",
+    label: "重量(kg)",
+    width: 90,
+    align: "right" as const,
+    formatter: (row: any) => row.cargoWeight ?? "-",
+  },
+  {
+    prop: "cargoVolume",
+    label: "体积(m³)",
+    width: 90,
+    align: "right" as const,
+    formatter: (row: any) => row.cargoVolume ?? "-",
+  },
+  {
+    prop: "cargoQuantity",
+    label: "数量(件)",
+    width: 80,
+    align: "right" as const,
+    formatter: (row: any) => row.cargoQuantity ?? "-",
+  },
+  { prop: "origin", label: "起始地", minWidth: 200, showOverflowTooltip: true },
   {
     prop: "destination",
     label: "目的地",
-    minWidth: 150,
+    minWidth: 200,
     showOverflowTooltip: true,
   },
-  { prop: "senderName", label: "发货人", width: 100 },
-  { prop: "receiverName", label: "收货人", width: 100 },
+  { prop: "senderName", label: "发货人", width: 80 },
+  { prop: "receiverName", label: "收货人", width: 80 },
   {
     prop: "status",
     label: "状态",
-    width: 100,
+    width: 90,
     align: "center" as const,
     render: (row: any) => {
       const status = statusMap[row.status] || {
@@ -122,7 +192,8 @@ const columns = [
       );
     },
   },
-  { prop: "createTime", label: "创建时间", width: 170 },
+  { prop: "remark", label: "备注", minWidth: 100, showOverflowTooltip: true },
+  { prop: "createTime", label: "创建时间", width: 160 },
 ];
 
 // 查看地图

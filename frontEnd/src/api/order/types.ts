@@ -3,6 +3,11 @@ export interface Order {
   orderNo?: string;
   cargoName: string;
   cargoType: string;
+  cargoWeight?: number;
+  cargoVolume?: number;
+  cargoQuantity?: number;
+  remark?: string;
+  expressCompany?: string;
   origin: string;
   destination: string;
   senderName: string;
@@ -11,18 +16,25 @@ export interface Order {
   receiverPhone: string;
   status?: string;
   createTime?: string;
+  duration?: number; // 预计时长(秒)
 }
 
 /** 创建订单请求 */
 export interface CreateOrderRequest {
   cargoName: string;
   cargoType: string;
+  cargoWeight?: number;
+  cargoVolume?: number;
+  cargoQuantity?: number;
+  remark?: string;
+  expressCompany?: string;
   origin: string;
   destination: string;
   senderName: string;
   receiverName: string;
   senderPhone: string;
   receiverPhone: string;
+  duration?: number; // 预计时长(秒)
   trackPoints: RouteTrackPoint[];
 }
 

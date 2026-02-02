@@ -27,6 +27,13 @@ export function getOrders(
 }
 
 /**
+ * 获取单个订单
+ */
+export function getOrder(orderNo: string): Promise<Order> {
+  return request.get(`/orders/${orderNo}`);
+}
+
+/**
  * 创建订单
  */
 export function createOrder(data: CreateOrderRequest): Promise<Order> {

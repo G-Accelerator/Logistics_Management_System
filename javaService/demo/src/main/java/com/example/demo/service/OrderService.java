@@ -68,14 +68,20 @@ public class OrderService {
     }
 
     /**
-     * 根据订单号获取站点数据
+     * 根据订单号获取订单
      */
-    public List<TrackPoint> getTrackPoints(String orderNo) {
-        Order order = orders.stream()
+    public Order getOrder(String orderNo) {
+        return orders.stream()
             .filter(o -> o.getOrderNo().equals(orderNo))
             .findFirst()
             .orElse(null);
+    }
 
+    /**
+     * 根据订单号获取站点数据
+     */
+    public List<TrackPoint> getTrackPoints(String orderNo) {
+        Order order = getOrder(orderNo);
         if (order == null || order.getTrackPoints() == null) {
             return List.of();
         }

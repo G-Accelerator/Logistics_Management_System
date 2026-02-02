@@ -41,6 +41,22 @@
                 </el-select>
               </el-form-item>
             </el-col>
+            <el-col :xs="24" :sm="12" :md="4">
+              <el-form-item label="快递公司" prop="expressCompany">
+                <el-select
+                  v-model="orderForm.expressCompany"
+                  placeholder="请选择"
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="item in expressCompanies"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
             <el-col :xs="8" :sm="4" :md="3">
               <el-form-item label="重量(kg)" prop="cargoWeight">
                 <el-input-number
@@ -322,6 +338,7 @@ const orderForm = reactive({
   cargoVolume: 10 as number | null,
   cargoQuantity: 20 as number | null,
   remark: "轻拿轻放",
+  expressCompany: "sf",
 });
 
 const cargoTypes = [
@@ -329,6 +346,16 @@ const cargoTypes = [
   { label: "易碎品", value: "fragile" },
   { label: "冷链货物", value: "cold" },
   { label: "危险品", value: "dangerous" },
+];
+
+const expressCompanies = [
+  { label: "顺丰速运", value: "sf" },
+  { label: "中通快递", value: "zto" },
+  { label: "圆通速递", value: "yto" },
+  { label: "韵达快递", value: "yd" },
+  { label: "申通快递", value: "sto" },
+  { label: "京东物流", value: "jd" },
+  { label: "德邦快递", value: "deppon" },
 ];
 
 const rules: FormRules = {
@@ -348,6 +375,9 @@ const rules: FormRules = {
   ],
   cargoName: [{ required: true, message: "请输入货物名称", trigger: "blur" }],
   cargoType: [{ required: true, message: "请选择货物类型", trigger: "change" }],
+  expressCompany: [
+    { required: true, message: "请选择快递公司", trigger: "change" },
+  ],
   cargoWeight: [{ required: true, message: "请输入货物重量", trigger: "blur" }],
 };
 
@@ -425,9 +455,11 @@ const useCurrentLocation = (type: "origin" | "destination") => {
 
 const handleRouteUpdate = (route: RouteOptionData | null) => {
   trackPoints.value = route?.trackPoints || [];
+  selectedDuration.value = route?.duration || 0;
 };
 
 const submitting = ref(false);
+const selectedDuration = ref(0);
 
 const submitOrder = async () => {
   if (!formRef.value) return;
@@ -439,16 +471,22 @@ const submitOrder = async () => {
       }
       submitting.value = true;
       try {
-        // 调用后端创建订单，包含站点数据
+        // 调用后端创建订单，包含所有字段
         const result = await createOrder({
           cargoName: orderForm.cargoName,
           cargoType: orderForm.cargoType,
+          cargoWeight: orderForm.cargoWeight ?? undefined,
+          cargoVolume: orderForm.cargoVolume ?? undefined,
+          cargoQuantity: orderForm.cargoQuantity ?? undefined,
+          remark: orderForm.remark || undefined,
+          expressCompany: orderForm.expressCompany,
           origin: orderForm.origin,
           destination: orderForm.destination,
           senderName: orderForm.senderName,
           receiverName: orderForm.receiverName,
           senderPhone: orderForm.senderPhone,
           receiverPhone: orderForm.receiverPhone,
+          duration: selectedDuration.value,
           trackPoints: trackPoints.value,
         });
 
