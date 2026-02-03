@@ -193,7 +193,9 @@ const columns = [
     showOverflowTooltip: true,
   },
   { prop: "senderName", label: "发货人", width: 80 },
+  { prop: "senderPhone", label: "发货人电话", width: 120 },
   { prop: "receiverName", label: "收货人", width: 80 },
+  { prop: "receiverPhone", label: "收货人电话", width: 120 },
   {
     prop: "status",
     label: "状态",

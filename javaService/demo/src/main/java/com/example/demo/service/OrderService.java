@@ -68,7 +68,8 @@ public class OrderService {
      */
     public PageResult<Order> getOrders(int page, int pageSize, String orderNo,
                                        String status, String cargoType, String cargoName,
-                                       String expressCompany, String senderName, String receiverName) {
+                                       String expressCompany, String senderName, String receiverName,
+                                       String receiverPhone) {
         List<Order> filtered = orders.stream()
             .filter(o -> orderNo == null || orderNo.isEmpty() || o.getOrderNo().contains(orderNo))
             .filter(o -> status == null || status.isEmpty() || o.getStatus().equals(status))
@@ -81,6 +82,8 @@ public class OrderService {
                 (o.getSenderName() != null && o.getSenderName().contains(senderName)))
             .filter(o -> receiverName == null || receiverName.isEmpty() || 
                 (o.getReceiverName() != null && o.getReceiverName().contains(receiverName)))
+            .filter(o -> receiverPhone == null || receiverPhone.isEmpty() || 
+                (o.getReceiverPhone() != null && o.getReceiverPhone().equals(receiverPhone)))
             .toList();
 
         int start = (page - 1) * pageSize;
@@ -179,6 +182,27 @@ public class OrderService {
         long pending = orders.stream().filter(o -> "pending".equals(o.getStatus())).count();
         long shipping = orders.stream().filter(o -> "shipping".equals(o.getStatus())).count();
         long completed = orders.stream().filter(o -> "completed".equals(o.getStatus())).count();
+        
+        return Map.of(
+            "total", total,
+            "pending", pending,
+            "shipping", shipping,
+            "completed", completed
+        );
+    }
+
+    /**
+     * 根据手机号获取订单统计（买家专用）
+     */
+    public Map<String, Object> getStatsByPhone(String phone) {
+        List<Order> filtered = orders.stream()
+            .filter(o -> phone.equals(o.getReceiverPhone()))
+            .toList();
+        
+        long total = filtered.size();
+        long pending = filtered.stream().filter(o -> "pending".equals(o.getStatus())).count();
+        long shipping = filtered.stream().filter(o -> "shipping".equals(o.getStatus())).count();
+        long completed = filtered.stream().filter(o -> "completed".equals(o.getStatus())).count();
         
         return Map.of(
             "total", total,

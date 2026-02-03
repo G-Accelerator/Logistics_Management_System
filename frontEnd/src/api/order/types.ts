@@ -53,6 +53,7 @@ export interface OrderQueryParams {
   expressCompany?: string;
   senderName?: string;
   receiverName?: string;
+  receiverPhone?: string;
 }
 
 /** 路线策略 */

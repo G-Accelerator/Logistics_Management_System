@@ -286,10 +286,14 @@ const statusTextMap: Record<string, string> = {
 };
 
 // 操作类型标签映射
-const actionTagType: Record<string, "primary" | "success" | "danger"> = {
+const actionTagType: Record<
+  string,
+  "primary" | "success" | "danger" | "warning"
+> = {
   ship: "primary",
   receive: "success",
   cancel: "danger",
+  station_arrive: "warning",
 };
 
 // 操作类型文本映射
@@ -297,6 +301,7 @@ const actionTextMap: Record<string, string> = {
   ship: "发货",
   receive: "签收",
   cancel: "取消",
+  station_arrive: "站点到达",
 };
 
 // 表格列配置
@@ -310,8 +315,10 @@ const columns = [
     formatter: (row: any) =>
       expressCompanyMap[row.expressCompany] || row.expressCompany || "-",
   },
-  { prop: "senderName", label: "发货人", width: 100 },
-  { prop: "receiverName", label: "收货人", width: 100 },
+  { prop: "senderName", label: "发货人", width: 80 },
+  { prop: "senderPhone", label: "发货人电话", width: 120 },
+  { prop: "receiverName", label: "收货人", width: 80 },
+  { prop: "receiverPhone", label: "收货人电话", width: 120 },
   {
     prop: "origin",
     label: "发货地址",

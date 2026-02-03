@@ -11,6 +11,13 @@ export function login(data: LoginRequest): Promise<LoginResponse> {
 }
 
 /**
+ * 买家手机号登录
+ */
+export function loginByPhone(phone: string): Promise<LoginResponse> {
+  return request.post("/auth/login/phone", { phone });
+}
+
+/**
  * 用户登出
  */
 export function logout(): Promise<void> {

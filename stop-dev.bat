@@ -1,13 +1,15 @@
 @echo off
-echo 停止开发服务...
+chcp 65001 >nul
 
-:: 停止 Java 进程 (Spring Boot)
-taskkill /F /FI "WINDOWTITLE eq Backend - Spring Boot*" 2>nul
+echo Stopping dev services...
+
+:: Stop Java process (Spring Boot)
+taskkill /F /FI "WINDOWTITLE eq Backend*" 2>nul
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8080 ^| findstr LISTENING') do taskkill /F /PID %%a 2>nul
 
-:: 停止 Node 进程 (Vite)
-taskkill /F /FI "WINDOWTITLE eq Frontend - Vite*" 2>nul
+:: Stop Node process (Vite)
+taskkill /F /FI "WINDOWTITLE eq Frontend*" 2>nul
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5173 ^| findstr LISTENING') do taskkill /F /PID %%a 2>nul
 
-echo 服务已停止
+echo Services stopped
 pause

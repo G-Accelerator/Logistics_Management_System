@@ -2,7 +2,9 @@ package com.example.demo.service;
 
 import com.example.demo.dto.StationInfo;
 import com.example.demo.dto.RoutePlanResponse.TrackPoint;
+import com.example.demo.entity.OperationLog;
 import com.example.demo.entity.Order;
+import com.example.demo.repository.OperationLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,9 +28,26 @@ public class StationStatusService {
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final OrderService orderService;
+    private final OperationLogRepository operationLogRepository;
 
-    public StationStatusService(OrderService orderService) {
+    public StationStatusService(OrderService orderService, OperationLogRepository operationLogRepository) {
         this.orderService = orderService;
+        this.operationLogRepository = operationLogRepository;
+    }
+
+    /**
+     * 记录站点到达日志
+     */
+    private void logStationArrival(String orderNo, String stationName, int stationIndex) {
+        OperationLog opLog = new OperationLog();
+        opLog.setOrderNo(orderNo);
+        opLog.setAction("station_arrive");
+        opLog.setFromStatus("pending");
+        opLog.setToStatus("arrived");
+        opLog.setOperator("系统");
+        opLog.setOperateTime(LocalDateTime.now());
+        opLog.setRemark(String.format("站点 %d [%s] 已到达", stationIndex + 1, stationName));
+        operationLogRepository.save(opLog);
     }
 
     /**
@@ -104,6 +123,10 @@ public class StationStatusService {
 
         // 持久化
         orderService.updateOrder(order);
+        
+        // 记录操作日志
+        logStationArrival(orderNo, trackPoint.getLocation(), stationIndex);
+        
         log.info("订单 {} 站点 {} 已标记到达", orderNo, stationIndex);
 
         return new StationInfo(
@@ -145,6 +168,8 @@ public class StationStatusService {
 
         if (arrivedCount > 0) {
             orderService.updateOrder(order);
+            // 记录操作日志
+            logStationArrival(orderNo, "全部站点", -1);
             log.info("订单 {} 全部 {} 个站点已标记到达", orderNo, arrivedCount);
         }
 
@@ -188,6 +213,9 @@ public class StationStatusService {
 
         if (arrivedCount > 0) {
             orderService.updateOrder(order);
+            // 记录操作日志
+            TrackPoint targetPoint = trackPoints.get(targetIndex);
+            logStationArrival(orderNo, "至 " + targetPoint.getLocation(), targetIndex);
             log.info("订单 {} 已标记到达至站点 {}，共 {} 个站点", orderNo, targetIndex, arrivedCount);
         }
 

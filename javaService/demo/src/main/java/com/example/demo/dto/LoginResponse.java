@@ -39,6 +39,7 @@ public class LoginResponse {
         private String nickname;
         private String avatar;
         private String role;
+        private String phone;
 
         public UserInfo() {}
 
@@ -48,6 +49,15 @@ public class LoginResponse {
             this.nickname = nickname;
             this.avatar = avatar;
             this.role = role;
+        }
+
+        public UserInfo(String id, String username, String nickname, String avatar, String role, String phone) {
+            this.id = id;
+            this.username = username;
+            this.nickname = nickname;
+            this.avatar = avatar;
+            this.role = role;
+            this.phone = phone;
         }
 
         public String getId() {
@@ -88,6 +98,14 @@ public class LoginResponse {
 
         public void setRole(String role) {
             this.role = role;
+        }
+
+        public String getPhone() {
+            return phone;
+        }
+
+        public void setPhone(String phone) {
+            this.phone = phone;
         }
     }
 }

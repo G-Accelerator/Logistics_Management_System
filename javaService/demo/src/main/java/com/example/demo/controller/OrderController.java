@@ -11,6 +11,7 @@ import com.example.demo.dto.StationInfo;
 import com.example.demo.entity.OperationLog;
 import com.example.demo.entity.Order;
 import com.example.demo.service.AMapService;
+import com.example.demo.service.AuthService;
 import com.example.demo.service.OrderService;
 import com.example.demo.service.OrderStatusService;
 import com.example.demo.service.StationStatusService;
@@ -30,14 +31,17 @@ public class OrderController {
     private final AMapService aMapService;
     private final OrderStatusService orderStatusService;
     private final StationStatusService stationStatusService;
+    private final AuthService authService;
     
     public OrderController(OrderService orderService, AMapService aMapService, 
                           OrderStatusService orderStatusService,
-                          StationStatusService stationStatusService) {
+                          StationStatusService stationStatusService,
+                          AuthService authService) {
         this.orderService = orderService;
         this.aMapService = aMapService;
         this.orderStatusService = orderStatusService;
         this.stationStatusService = stationStatusService;
+        this.authService = authService;
     }
     
     /**
@@ -47,6 +51,61 @@ public class OrderController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getStats() {
         Map<String, Object> stats = orderService.getStats();
         return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+
+    /**
+     * 买家订单列表（根据token自动获取手机号过滤）
+     */
+    @GetMapping("/buyer")
+    public ResponseEntity<ApiResponse<PageResult<Order>>> getBuyerOrders(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String orderNo,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String cargoName) {
+        
+        String phone = getPhoneFromToken(authorization);
+        if (phone == null || phone.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未登录或非买家用户"));
+        }
+        
+        PageResult<Order> result = orderService.getOrders(page, pageSize, orderNo, status, null, 
+            cargoName, null, null, null, phone);
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    /**
+     * 买家订单统计（根据token自动获取手机号过滤）
+     */
+    @GetMapping("/buyer/stats")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getBuyerStats(
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        
+        String phone = getPhoneFromToken(authorization);
+        if (phone == null || phone.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未登录或非买家用户"));
+        }
+        
+        Map<String, Object> stats = orderService.getStatsByPhone(phone);
+        return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+
+    /**
+     * 从token获取手机号
+     */
+    private String getPhoneFromToken(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return null;
+        }
+        String token = authorization.substring(7);
+        try {
+            return authService.getUserInfo(token).getPhone();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @GetMapping
@@ -59,9 +118,10 @@ public class OrderController {
             @RequestParam(required = false) String cargoName,
             @RequestParam(required = false) String expressCompany,
             @RequestParam(required = false) String senderName,
-            @RequestParam(required = false) String receiverName) {
+            @RequestParam(required = false) String receiverName,
+            @RequestParam(required = false) String receiverPhone) {
         PageResult<Order> result = orderService.getOrders(page, pageSize, orderNo, status, cargoType, 
-            cargoName, expressCompany, senderName, receiverName);
+            cargoName, expressCompany, senderName, receiverName, receiverPhone);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 

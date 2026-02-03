@@ -117,12 +117,22 @@
           </template>
           <div class="quick-actions">
             <el-button
+              v-if="!isBuyer"
               type="primary"
               :icon="Plus"
               class="action-btn"
               @click="handleCreateOrder"
             >
               创建订单
+            </el-button>
+            <el-button
+              v-if="isBuyer"
+              type="primary"
+              :icon="Document"
+              class="action-btn"
+              @click="handleMyOrders"
+            >
+              我的订单
             </el-button>
             <el-button
               type="success"
@@ -143,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import {
   Plus,
@@ -154,10 +164,22 @@ import {
   CircleCheck,
   Refresh,
 } from "@element-plus/icons-vue";
-import { getOrders, getOrderStats } from "../../../api/order";
+import {
+  getOrders,
+  getOrderStats,
+  getBuyerOrders,
+  getBuyerStats,
+} from "../../../api/order";
+import { useUserStore } from "../../../store/user";
 
 const router = useRouter();
+const userStore = useUserStore();
 const loading = ref(false);
+
+// 是否为买家
+const isBuyer = computed(
+  () => userStore.userInfo?.role === "buyer" || !!userStore.buyerPhone,
+);
 
 const stats = ref({
   total: 0,
@@ -181,14 +203,23 @@ const getStatusText = (status: string) => statusMap[status]?.text || status;
 const loadData = async () => {
   loading.value = true;
   try {
-    // 并行获取统计和最近订单
-    const [statsData, ordersData] = await Promise.all([
-      getOrderStats(),
-      getOrders({ page: 1, pageSize: 5 }),
-    ]);
-
-    stats.value = statsData;
-    recentOrders.value = ordersData.data;
+    if (isBuyer.value) {
+      // 买家使用专用接口
+      const [statsData, ordersData] = await Promise.all([
+        getBuyerStats(),
+        getBuyerOrders({ page: 1, pageSize: 5 }),
+      ]);
+      stats.value = statsData;
+      recentOrders.value = ordersData.data;
+    } else {
+      // 管理员/其他用户
+      const [statsData, ordersData] = await Promise.all([
+        getOrderStats(),
+        getOrders({ page: 1, pageSize: 5 }),
+      ]);
+      stats.value = statsData;
+      recentOrders.value = ordersData.data;
+    }
   } catch (e) {
     console.error("加载数据失败", e);
   } finally {
@@ -196,8 +227,10 @@ const loadData = async () => {
   }
 };
 
-const handleViewMore = () => router.push("/order/list");
+const handleViewMore = () =>
+  router.push(isBuyer.value ? "/buyer/orders" : "/order/list");
 const handleCreateOrder = () => router.push("/order/create");
+const handleMyOrders = () => router.push("/buyer/orders");
 const handleTrack = () => router.push("/transport/track");
 
 onMounted(() => {

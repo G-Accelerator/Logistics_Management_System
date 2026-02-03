@@ -41,28 +41,8 @@ export const constantRoutes: AppRouteRecordRaw[] = [
   },
 ];
 
-// 动态路由（根据权限加载）
-export const asyncRoutes: AppRouteRecordRaw[] = [
-  {
-    path: "/seller",
-    component: () => import("../../layouts/MainLayout.vue"),
-    redirect: "/seller/shipment",
-    meta: {
-      title: "卖家中心",
-      icon: "Shop",
-    },
-    children: [
-      {
-        path: "/seller/shipment",
-        name: "SellerShipment",
-        component: () => import("../../views/seller/Shipment/index.vue"),
-        meta: {
-          title: "我的发货",
-          icon: "Van",
-        },
-      },
-    ],
-  },
+// 买家专属路由
+export const buyerRoutes: AppRouteRecordRaw[] = [
   {
     path: "/buyer",
     component: () => import("../../layouts/MainLayout.vue"),
@@ -84,21 +64,46 @@ export const asyncRoutes: AppRouteRecordRaw[] = [
     ],
   },
   {
-    path: "/admin",
+    path: "/transport",
     component: () => import("../../layouts/MainLayout.vue"),
-    redirect: "/admin/waybill",
+    redirect: "/transport/track",
     meta: {
-      title: "管理员中心",
-      icon: "Management",
+      title: "物流查询",
+      icon: "Van",
     },
     children: [
       {
-        path: "/admin/waybill",
-        name: "AdminWaybill",
-        component: () => import("../../views/admin/Waybill/index.vue"),
+        path: "/transport/track",
+        name: "TransportTrack",
+        component: () =>
+          import("../../views/transport/TransportTrack/index.vue"),
         meta: {
-          title: "运单管理",
-          icon: "Tickets",
+          title: "运输跟踪",
+          icon: "Location",
+        },
+      },
+    ],
+  },
+];
+
+// 动态路由（根据权限加载，非买家用户）
+export const asyncRoutes: AppRouteRecordRaw[] = [
+  {
+    path: "/seller",
+    component: () => import("../../layouts/MainLayout.vue"),
+    redirect: "/seller/shipment",
+    meta: {
+      title: "卖家中心",
+      icon: "Shop",
+    },
+    children: [
+      {
+        path: "/seller/shipment",
+        name: "SellerShipment",
+        component: () => import("../../views/seller/Shipment/index.vue"),
+        meta: {
+          title: "我的发货",
+          icon: "Van",
         },
       },
     ],
@@ -129,6 +134,15 @@ export const asyncRoutes: AppRouteRecordRaw[] = [
           title: "创建订单",
           icon: "Plus",
           noCache: true,
+        },
+      },
+      {
+        path: "/order/waybill",
+        name: "OrderWaybill",
+        component: () => import("../../views/order/Waybill/index.vue"),
+        meta: {
+          title: "运单管理",
+          icon: "Tickets",
         },
       },
     ],

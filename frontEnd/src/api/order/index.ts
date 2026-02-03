@@ -50,6 +50,27 @@ export function getOrderStats(): Promise<{
 }
 
 /**
+ * 买家订单列表（根据token自动过滤）
+ */
+export function getBuyerOrders(
+  params: Omit<OrderQueryParams, "receiverPhone">,
+): Promise<PageResult<Order>> {
+  return request.get("/orders/buyer", { params });
+}
+
+/**
+ * 买家订单统计（根据token自动过滤）
+ */
+export function getBuyerStats(): Promise<{
+  total: number;
+  pending: number;
+  shipping: number;
+  completed: number;
+}> {
+  return request.get("/orders/buyer/stats");
+}
+
+/**
  * 获取单个订单
  */
 export function getOrder(orderNo: string): Promise<Order> {

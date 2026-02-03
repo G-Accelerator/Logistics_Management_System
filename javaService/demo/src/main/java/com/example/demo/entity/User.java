@@ -10,6 +10,7 @@ public class User {
     private String nickname;
     private String avatar;
     private String role;
+    private String phone;
 
     public User() {}
 
@@ -20,6 +21,16 @@ public class User {
         this.nickname = nickname;
         this.avatar = avatar;
         this.role = role;
+    }
+
+    public User(Long id, String username, String password, String nickname, String avatar, String role, String phone) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.nickname = nickname;
+        this.avatar = avatar;
+        this.role = role;
+        this.phone = phone;
     }
 
     public Long getId() {
@@ -68,5 +79,13 @@ public class User {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }

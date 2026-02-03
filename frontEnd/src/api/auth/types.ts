@@ -11,6 +11,7 @@ export interface UserInfo {
   nickname: string;
   avatar: string;
   role: string;
+  phone?: string;
 }
 
 // 登录响应

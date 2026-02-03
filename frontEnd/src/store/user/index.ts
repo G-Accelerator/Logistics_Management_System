@@ -8,10 +8,10 @@ export type { UserInfo, LoginForm };
 export const useUserStore = defineStore("user", () => {
   const userInfo = ref<UserInfo | null>(null);
   const token = ref<string>(localStorage.getItem("token") || "");
+  const buyerPhone = ref<string>(localStorage.getItem("buyerPhone") || "");
 
-  // 登录
+  // 账号密码登录
   const login = async (username: string, password: string) => {
-    // 响应拦截器已自动解包 ApiResponse，直接拿到 LoginResponse
     const data: authApi.LoginResponse = await authApi.login({
       username,
       password,
@@ -19,9 +19,25 @@ export const useUserStore = defineStore("user", () => {
     if (data && data.token) {
       token.value = data.token;
       userInfo.value = data.userInfo;
+      buyerPhone.value = "";
       localStorage.setItem("token", data.token);
+      localStorage.removeItem("buyerPhone");
     } else {
       throw new Error("登录失败");
+    }
+  };
+
+  // 买家手机号登录
+  const loginByPhone = async (phone: string) => {
+    const data: authApi.LoginResponse = await authApi.loginByPhone(phone);
+    if (data && data.token) {
+      token.value = data.token;
+      userInfo.value = data.userInfo;
+      buyerPhone.value = phone;
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("buyerPhone", phone);
+    } else {
+      throw new Error("验证失败");
     }
   };
 
@@ -32,13 +48,14 @@ export const useUserStore = defineStore("user", () => {
     } finally {
       token.value = "";
       userInfo.value = null;
+      buyerPhone.value = "";
       localStorage.removeItem("token");
+      localStorage.removeItem("buyerPhone");
     }
   };
 
   // 获取用户信息
   const getUserInfo = async () => {
-    // 响应拦截器已自动解包 ApiResponse，直接拿到 UserInfo
     const data: authApi.UserInfo = await authApi.getUserInfo();
     if (data) {
       userInfo.value = data;
@@ -47,11 +64,17 @@ export const useUserStore = defineStore("user", () => {
     }
   };
 
+  // 是否为买家角色
+  const isBuyer = () => userInfo.value?.role === "buyer";
+
   return {
     userInfo,
     token,
+    buyerPhone,
     login,
+    loginByPhone,
     logout,
     getUserInfo,
+    isBuyer,
   };
 });

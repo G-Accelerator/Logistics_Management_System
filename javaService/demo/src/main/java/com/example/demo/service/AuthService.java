@@ -19,6 +19,8 @@ public class AuthService {
     private static final Map<String, User> USERS = new HashMap<>();
     // 模拟token存储
     private static final Map<String, User> TOKEN_STORE = new HashMap<>();
+    // 买家手机号与用户映射
+    private static final Map<String, User> PHONE_USERS = new HashMap<>();
 
     static {
         // 初始化默认用户
@@ -56,6 +58,37 @@ public class AuthService {
     }
 
     /**
+     * 买家手机号登录
+     */
+    public LoginResponse loginByPhone(String phone) {
+        if (phone == null || !phone.matches("^1[3-9]\\d{9}$")) {
+            throw new RuntimeException("手机号格式不正确");
+        }
+
+        // 为该手机号创建或获取买家用户
+        User user = PHONE_USERS.computeIfAbsent(phone, p -> {
+            long id = 1000L + PHONE_USERS.size();
+            return new User(id, "buyer_" + p, "", "买家" + p.substring(7), "", "buyer", p);
+        });
+
+        // 生成token
+        String token = UUID.randomUUID().toString().replace("-", "");
+        TOKEN_STORE.put(token, user);
+
+        // 构建响应
+        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
+            user.getId().toString(),
+            user.getUsername(),
+            user.getNickname(),
+            user.getAvatar(),
+            user.getRole(),
+            phone
+        );
+
+        return new LoginResponse(token, userInfo);
+    }
+
+    /**
      * 用户登出
      */
     public void logout(String token) {
@@ -76,7 +109,8 @@ public class AuthService {
             user.getUsername(),
             user.getNickname(),
             user.getAvatar(),
-            user.getRole()
+            user.getRole(),
+            user.getPhone()
         );
     }
 }

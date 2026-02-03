@@ -6,7 +6,25 @@
         <p>Logistics Management System</p>
       </div>
 
+      <!-- 登录方式切换 -->
+      <div class="login-tabs">
+        <span
+          :class="['tab-item', { active: loginType === 'account' }]"
+          @click="loginType = 'account'"
+        >
+          账号登录
+        </span>
+        <span
+          :class="['tab-item', { active: loginType === 'phone' }]"
+          @click="loginType = 'phone'"
+        >
+          买家查询
+        </span>
+      </div>
+
+      <!-- 账号密码登录 -->
       <el-form
+        v-if="loginType === 'account'"
         ref="loginFormRef"
         :model="loginForm"
         :rules="loginRules"
@@ -46,8 +64,41 @@
         </el-form-item>
       </el-form>
 
+      <!-- 手机号登录（买家） -->
+      <el-form
+        v-else
+        ref="phoneFormRef"
+        :model="phoneForm"
+        :rules="phoneRules"
+        class="login-form"
+        @keyup.enter="handlePhoneLogin"
+      >
+        <el-form-item prop="phone">
+          <el-input
+            v-model="phoneForm.phone"
+            placeholder="请输入收货手机号"
+            prefix-icon="Phone"
+            size="large"
+            maxlength="11"
+          />
+        </el-form-item>
+
+        <el-form-item>
+          <el-button
+            type="primary"
+            size="large"
+            :loading="loading"
+            class="login-button"
+            @click="handlePhoneLogin"
+          >
+            查询订单
+          </el-button>
+        </el-form-item>
+      </el-form>
+
       <div class="login-tips">
-        <p>默认账号：admin / 123456</p>
+        <p v-if="loginType === 'account'">默认账号：admin / 123456</p>
+        <p v-else>输入收货手机号查询您的订单</p>
       </div>
     </div>
   </div>
@@ -65,11 +116,17 @@ const router = useRouter();
 const userStore = useUserStore();
 
 const loginFormRef = ref<FormInstance>();
+const phoneFormRef = ref<FormInstance>();
 const loading = ref(false);
+const loginType = ref<"account" | "phone">("account");
 
 const loginForm = reactive<LoginForm>({
   username: "admin",
   password: "123456",
+});
+
+const phoneForm = reactive({
+  phone: "",
 });
 
 const loginRules: FormRules = {
@@ -77,6 +134,17 @@ const loginRules: FormRules = {
   password: [
     { required: true, message: "请输入密码", trigger: "blur" },
     { min: 6, message: "密码长度不能少于6位", trigger: "blur" },
+  ],
+};
+
+const phoneRules: FormRules = {
+  phone: [
+    { required: true, message: "请输入手机号", trigger: "blur" },
+    {
+      pattern: /^1[3-9]\d{9}$/,
+      message: "请输入正确的手机号",
+      trigger: "blur",
+    },
   ],
 };
 
@@ -92,6 +160,25 @@ const handleLogin = async () => {
         router.push("/dashboard");
       } catch (error) {
         ElMessage.error("登录失败，请检查用户名和密码");
+      } finally {
+        loading.value = false;
+      }
+    }
+  });
+};
+
+const handlePhoneLogin = async () => {
+  if (!phoneFormRef.value) return;
+
+  await phoneFormRef.value.validate(async (valid) => {
+    if (valid) {
+      loading.value = true;
+      try {
+        await userStore.loginByPhone(phoneForm.phone);
+        ElMessage.success("验证成功");
+        router.push("/buyer/orders");
+      } catch (error) {
+        ElMessage.error("验证失败，请检查手机号");
       } finally {
         loading.value = false;
       }
@@ -192,5 +279,31 @@ const handleLogin = async () => {
   margin: 0;
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+.login-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-bottom: 24px;
+}
+
+.tab-item {
+  font-size: 15px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding-bottom: 8px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.3s;
+}
+
+.tab-item:hover {
+  color: #6366f1;
+}
+
+.tab-item.active {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+  font-weight: 500;
 }
 </style>

@@ -91,7 +91,7 @@ import { useUserStore } from "../store/user";
 import { useTagsViewStore } from "../store/tagsView";
 import SidebarItem from "../components/layout/SidebarItem/index.vue";
 import TagsView from "../components/layout/TagsView/index.vue";
-import { constantRoutes, asyncRoutes } from "../router";
+import { constantRoutes, asyncRoutes, buyerRoutes } from "../router";
 import type { AppRouteRecordRaw } from "../types/router";
 
 const router = useRouter();
@@ -105,9 +105,13 @@ const menuKey = ref(0);
 // 缓存的视图
 const cachedViews = computed(() => tagsViewStore.cachedViews);
 
-// 获取所有菜单路由（过滤掉隐藏的路由）
+// 获取所有菜单路由（根据角色过滤）
 const menuRoutes = computed(() => {
-  const routes = [...constantRoutes, ...asyncRoutes];
+  // 买家只显示买家专属路由
+  const isBuyer = userStore.userInfo?.role === "buyer" || userStore.buyerPhone;
+  const routes = isBuyer
+    ? [...constantRoutes, ...buyerRoutes]
+    : [...constantRoutes, ...asyncRoutes];
   return filterMenuRoutes(routes);
 });
 

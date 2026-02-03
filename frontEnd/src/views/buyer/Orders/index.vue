@@ -32,7 +32,7 @@ import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
-import { getOrders, receiveOrder } from "../../../api/order";
+import { getBuyerOrders, receiveOrder } from "../../../api/order";
 
 const router = useRouter();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
@@ -158,10 +158,10 @@ const handleReceive = async (row: any) => {
   }
 };
 
-// 从后端API加载数据
+// 从后端API加载数据（买家专用接口，自动根据token过滤）
 const loadData = async (params: any) => {
   try {
-    const result = await getOrders({
+    const result = await getBuyerOrders({
       page: params.page,
       pageSize: params.pageSize,
       orderNo: params.orderNo,

@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.LoginResponse;
+import com.example.demo.dto.PhoneLoginRequest;
 import com.example.demo.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,20 @@ public class AuthController {
         try {
             LoginResponse response = authService.login(request);
             return ResponseEntity.ok(ApiResponse.success("登录成功", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, e.getMessage()));
+        }
+    }
+
+    /**
+     * 买家手机号登录
+     */
+    @PostMapping("/login/phone")
+    public ResponseEntity<ApiResponse<LoginResponse>> loginByPhone(@RequestBody PhoneLoginRequest request) {
+        try {
+            LoginResponse response = authService.loginByPhone(request.getPhone());
+            return ResponseEntity.ok(ApiResponse.success("验证成功", response));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, e.getMessage()));
@@ -65,6 +80,22 @@ public class AuthController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, e.getMessage()));
+        }
+    }
+
+    /**
+     * 根据token获取用户手机号（内部使用）
+     */
+    public String getPhoneByToken(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return null;
+        }
+        String token = authorization.substring(7);
+        try {
+            LoginResponse.UserInfo userInfo = authService.getUserInfo(token);
+            return userInfo.getPhone();
+        } catch (Exception e) {
+            return null;
         }
     }
 }
