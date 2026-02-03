@@ -39,7 +39,15 @@ request.interceptors.request.use(
 
 // 响应拦截器
 request.interceptors.response.use(
-  (response: AxiosResponse) => response.data,
+  (response: AxiosResponse) => {
+    // 后端统一返回 ApiResponse 格式: { code, message, data }
+    // 自动解包返回 data 字段
+    const result = response.data;
+    if (result && typeof result === "object" && "data" in result) {
+      return result.data;
+    }
+    return result;
+  },
   (error) => {
     const message =
       error.response?.data?.message || error.message || "请求失败";

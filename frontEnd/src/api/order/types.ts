@@ -49,6 +49,10 @@ export interface OrderQueryParams {
   orderNo?: string;
   status?: string;
   cargoType?: string;
+  cargoName?: string;
+  expressCompany?: string;
+  senderName?: string;
+  receiverName?: string;
 }
 
 /** 路线策略 */
@@ -87,4 +91,54 @@ export interface RouteOptionData {
 /** 路线规划响应 */
 export interface RoutePlanResponse {
   routes: RouteOptionData[];
+}
+
+/** 批量操作结果 */
+export interface BatchResult {
+  success: boolean;
+  successCount: number;
+  failedOrders?: string[];
+  message?: string;
+}
+
+/** 操作日志 */
+export interface OperationLog {
+  id: number;
+  orderNo: string;
+  action: "ship" | "receive" | "cancel";
+  fromStatus: string;
+  toStatus: string;
+  operator: string;
+  operateTime: string;
+  remark?: string;
+}
+
+// ==================== 站点状态类型 ====================
+
+/** 站点状态 */
+export type StationStatus = "pending" | "arrived";
+
+/** 站点信息 */
+export interface StationInfo {
+  index: number;
+  location: string;
+  lng: number;
+  lat: number;
+  status: StationStatus;
+  arrivalTime?: string;
+}
+
+/** 单个站点到达响应 */
+export interface StationArriveResponse {
+  success: boolean;
+  message: string;
+  arrivalTime: string;
+  stationIndex: number;
+}
+
+/** 批量站点到达响应 */
+export interface BatchStationArriveResponse {
+  success: boolean;
+  message: string;
+  arrivedCount: number;
 }

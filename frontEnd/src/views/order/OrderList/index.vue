@@ -10,13 +10,6 @@
       :operations="operations"
       :operation-width="180"
     />
-
-    <!-- 地图弹窗 -->
-    <MapDialog
-      v-model="showMapDialog"
-      :title="`订单 ${currentOrderNo} 物流路线`"
-      :points="mapPoints"
-    />
   </page-container>
 </template>
 
@@ -27,15 +20,10 @@ import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
 import { Plus, DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
-import MapDialog from "../../../components/business/MapDialog/index.vue";
-import type { MapPoint } from "../../../components/business/MapDialog/types";
-import { getOrders, getTrackPoints, deleteOrder } from "../../../api/order";
+import { getOrders, deleteOrder } from "../../../api/order";
 
 const router = useRouter();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
-const showMapDialog = ref(false);
-const currentOrderNo = ref("");
-const mapPoints = ref<MapPoint[]>([]);
 
 // 复制订单号
 const copyOrderNo = async (orderNo: string) => {
@@ -54,6 +42,12 @@ const searchConfig = [
     label: "订单号",
     type: "input" as const,
     placeholder: "请输入订单号",
+  },
+  {
+    prop: "cargoName",
+    label: "货物名称",
+    type: "input" as const,
+    placeholder: "请输入货物名称",
   },
   {
     prop: "status",
@@ -77,7 +71,32 @@ const searchConfig = [
       { label: "危险品", value: "dangerous" },
     ],
   },
-  { prop: "createTime", label: "创建时间", type: "daterange" as const },
+  {
+    prop: "expressCompany",
+    label: "快递公司",
+    type: "select" as const,
+    options: [
+      { label: "顺丰速运", value: "sf" },
+      { label: "中通快递", value: "zto" },
+      { label: "圆通速递", value: "yto" },
+      { label: "韵达快递", value: "yd" },
+      { label: "申通快递", value: "sto" },
+      { label: "京东物流", value: "jd" },
+      { label: "德邦快递", value: "deppon" },
+    ],
+  },
+  {
+    prop: "senderName",
+    label: "发货人",
+    type: "input" as const,
+    placeholder: "请输入发货人",
+  },
+  {
+    prop: "receiverName",
+    label: "收货人",
+    type: "input" as const,
+    placeholder: "请输入收货人",
+  },
 ];
 
 // 状态映射
@@ -196,28 +215,14 @@ const columns = [
   { prop: "createTime", label: "创建时间", width: 160 },
 ];
 
-// 查看地图
-const viewMap = async (row: any) => {
-  try {
-    currentOrderNo.value = row.orderNo;
-    const points = await getTrackPoints(row.orderNo);
-    mapPoints.value = points.map((pt, idx) => ({
-      lng: pt.lng,
-      lat: pt.lat,
-      name: pt.status,
-      address: pt.location,
-      isStart: idx === 0,
-      isEnd: idx === points.length - 1,
-    }));
-    showMapDialog.value = true;
-  } catch (e) {
-    ElMessage.error("获取站点数据失败");
-  }
+// 查看物流
+const viewTrack = (row: any) => {
+  router.push({ path: "/transport/track", query: { orderNo: row.orderNo } });
 };
 
 // 操作按钮
 const operations = [
-  { label: "查看地图", type: "primary" as const, handler: viewMap },
+  { label: "查看物流", type: "primary" as const, handler: viewTrack },
   {
     label: "编辑",
     type: "warning" as const,
@@ -262,6 +267,10 @@ const loadData = async (params: any) => {
       orderNo: params.orderNo,
       status: params.status,
       cargoType: params.cargoType,
+      cargoName: params.cargoName,
+      expressCompany: params.expressCompany,
+      senderName: params.senderName,
+      receiverName: params.receiverName,
     });
     return { data: result.data, total: result.total };
   } catch (error) {

@@ -70,8 +70,14 @@ public class RoutePlanResponse {
         private double lat;
         private boolean passed;
         private boolean isCurrent;
+        // 站点到达状态: "pending"(待到达) | "arrived"(已到达)
+        private String arrivalStatus;
+        // 实际到达时间，格式 "yyyy-MM-dd HH:mm:ss"
+        private String arrivalTime;
 
-        public TrackPoint() {}
+        public TrackPoint() {
+            this.arrivalStatus = "pending";
+        }
 
         public TrackPoint(String status, String location, double lng, double lat) {
             this.time = "";
@@ -81,6 +87,8 @@ public class RoutePlanResponse {
             this.lat = lat;
             this.passed = false;
             this.isCurrent = false;
+            this.arrivalStatus = "pending";
+            this.arrivalTime = null;
         }
 
         public String getTime() { return time; }
@@ -97,5 +105,9 @@ public class RoutePlanResponse {
         public void setPassed(boolean passed) { this.passed = passed; }
         public boolean isCurrent() { return isCurrent; }
         public void setCurrent(boolean current) { isCurrent = current; }
+        public String getArrivalStatus() { return arrivalStatus; }
+        public void setArrivalStatus(String arrivalStatus) { this.arrivalStatus = arrivalStatus; }
+        public String getArrivalTime() { return arrivalTime; }
+        public void setArrivalTime(String arrivalTime) { this.arrivalTime = arrivalTime; }
     }
 }

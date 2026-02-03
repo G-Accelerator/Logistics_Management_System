@@ -116,7 +116,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from "vue";
+import { ref, reactive, onMounted, onUnmounted, onActivated } from "vue";
+import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import {
   ZoomIn,
@@ -126,13 +127,16 @@ import {
   Refresh,
 } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
-import { getOrder, getTrackPoints } from "../../../api/order";
+import { getOrder, getTrackPoints, getStationStatus } from "../../../api/order";
 import type { TrackInfo, TrackPoint } from "./types";
+import type { StationInfo } from "../../../api/order/types";
 
 // 组件名称，用于 keep-alive 缓存
 defineOptions({ name: "TransportTrack" });
 
 export type { TrackInfo, TrackPoint } from "./types";
+
+const route = useRoute();
 
 // 快递公司映射
 const expressCompanyMap: Record<string, string> = {
@@ -157,6 +161,20 @@ let passedPolyline: any = null;
 let pendingPolyline: any = null;
 let markers: any[] = [];
 let currentMarker: any = null;
+
+// 地图是否已初始化
+const mapReady = ref(false);
+
+// 检查路由参数并搜索
+const checkRouteAndSearch = () => {
+  const orderNo = route.query.orderNo;
+  if (orderNo && typeof orderNo === "string") {
+    searchForm.trackingNo = orderNo;
+    if (mapReady.value && !loading.value) {
+      handleSearch();
+    }
+  }
+};
 
 // 状态类型映射
 const getStatusType = (status: string) => {
@@ -215,7 +233,16 @@ const initMap = () => {
     mapStyle: "amap://styles/normal",
   });
 
-  map.addControl(new AMap.Scale());
+  // 加载比例尺插件（高德地图 2.0 需要通过插件方式加载）
+  AMap.plugin(["AMap.Scale"], () => {
+    map.addControl(new AMap.Scale());
+  });
+
+  // 地图初始化完成后标记为就绪，并检查路由参数
+  map.on("complete", () => {
+    mapReady.value = true;
+    checkRouteAndSearch();
+  });
 };
 
 // 绘制轨迹
@@ -442,7 +469,72 @@ const handleSearch = async () => {
       estimatedTime: estimatedArrival ? formatDateTime(estimatedArrival) : "",
     };
 
-    // 获取站点数据
+    // 获取站点实际状态（从API获取，而非计算）
+    let stationStatusList: StationInfo[] = [];
+    try {
+      stationStatusList = await getStationStatus(searchForm.trackingNo);
+    } catch {
+      // 如果获取站点状态失败，回退到获取轨迹点
+      console.warn("获取站点状态失败，使用轨迹点数据");
+    }
+
+    // 如果有站点状态数据，使用实际状态
+    if (stationStatusList.length > 0) {
+      // 找到最后一个已到达的站点索引
+      let lastArrivedIndex = -1;
+      for (let i = 0; i < stationStatusList.length; i++) {
+        const station = stationStatusList[i];
+        if (station && station.status === "arrived") {
+          lastArrivedIndex = i;
+        }
+      }
+
+      // 转换为地图需要的格式，使用实际站点状态
+      const allPoints: TrackPoint[] = stationStatusList.map((station, idx) => {
+        const isStart = idx === 0;
+        const isEnd = idx === stationStatusList.length - 1;
+        const passed = station.status === "arrived";
+        // 当前位置是最后一个已到达的站点（且不是终点已到达）
+        const isCurrent = idx === lastArrivedIndex && !isEnd;
+
+        let status: string;
+        if (isStart) {
+          status = passed ? "已发货" : "待发货";
+        } else if (isEnd) {
+          status = passed ? "已送达" : "待到达";
+        } else {
+          status = passed ? "已到达" : "待到达";
+        }
+
+        // 计算预计到达时间（用于未到达的终点显示）
+        const stationProgress = idx / (stationStatusList.length - 1);
+        const stationTime =
+          sendTime && duration > 0
+            ? new Date(sendTime.getTime() + stationProgress * duration * 1000)
+            : null;
+        const estimatedTimeStr = stationTime
+          ? formatDateTime(stationTime).slice(5)
+          : undefined;
+
+        return {
+          time: station.arrivalTime || "",
+          status,
+          location: station.location,
+          lng: station.lng,
+          lat: station.lat,
+          passed,
+          isCurrent,
+          estimatedTime: !passed && isEnd ? estimatedTimeStr : undefined,
+        };
+      });
+
+      trackPoints.value = allPoints.filter((p) => p.passed).reverse();
+      drawTrack(allPoints);
+      ElMessage.success("查询成功");
+      return;
+    }
+
+    // 回退逻辑：如果没有站点状态数据，使用原有的轨迹点计算逻辑
     const points = await getTrackPoints(searchForm.trackingNo);
 
     if (points.length === 0) {
@@ -452,34 +544,27 @@ const handleSearch = async () => {
       return;
     }
 
-    // 根据订单状态决定物流进度
+    // 根据订单状态决定物流进度（回退逻辑）
     let progress = 0;
     if (orderStatus === "pending") {
-      // 待发货：没有任何进度
       progress = -1;
     } else if (orderStatus === "completed") {
-      // 已完成：全部到达
       progress = 1;
     } else if (orderStatus === "shipping" && sendTime && duration > 0) {
-      // 运输中：根据时间计算进度
       const now = new Date();
       const elapsed = now.getTime() - sendTime.getTime();
-      progress = Math.min(elapsed / (duration * 1000), 0.99); // 最多99%，未完成
+      progress = Math.min(elapsed / (duration * 1000), 0.99);
     } else if (orderStatus === "cancelled") {
-      // 已取消：显示到取消时的进度（简化为0）
       progress = -1;
     }
 
-    // 根据进度确定当前站点
     const currentIdx =
       progress >= 0 ? Math.floor(progress * (points.length - 1)) : -1;
 
-    // 转换为地图需要的格式
     const allPoints: TrackPoint[] = points.map((pt, idx) => {
       const isStart = idx === 0;
       const isEnd = idx === points.length - 1;
 
-      // 根据站点索引计算该站点的预计到达时间
       const stationProgress = idx / (points.length - 1);
       const stationTime =
         sendTime && duration > 0
@@ -487,7 +572,6 @@ const handleSearch = async () => {
           : null;
       const stationTimeStr = stationTime ? formatDateTime(stationTime) : "";
 
-      // 判断是否已经过
       const passed = idx <= currentIdx;
       const isCurrent = idx === currentIdx && progress < 1;
 
@@ -547,7 +631,23 @@ const handleFitView = () => map?.setFitView();
 
 // 生命周期
 onMounted(() => {
-  setTimeout(initMap, 100);
+  setTimeout(() => {
+    initMap();
+  }, 100);
+});
+
+// keep-alive 激活时检查路由参数（从其他页面返回时）
+onActivated(() => {
+  const orderNo = route.query.orderNo;
+  if (orderNo && typeof orderNo === "string") {
+    // 只有订单号变化时才搜索
+    if (orderNo !== searchForm.trackingNo) {
+      searchForm.trackingNo = orderNo;
+      if (mapReady.value && !loading.value) {
+        handleSearch();
+      }
+    }
+  }
 });
 
 onUnmounted(() => {

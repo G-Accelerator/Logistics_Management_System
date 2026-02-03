@@ -44,6 +44,66 @@ export const constantRoutes: AppRouteRecordRaw[] = [
 // 动态路由（根据权限加载）
 export const asyncRoutes: AppRouteRecordRaw[] = [
   {
+    path: "/seller",
+    component: () => import("../../layouts/MainLayout.vue"),
+    redirect: "/seller/shipment",
+    meta: {
+      title: "卖家中心",
+      icon: "Shop",
+    },
+    children: [
+      {
+        path: "/seller/shipment",
+        name: "SellerShipment",
+        component: () => import("../../views/seller/Shipment/index.vue"),
+        meta: {
+          title: "我的发货",
+          icon: "Van",
+        },
+      },
+    ],
+  },
+  {
+    path: "/buyer",
+    component: () => import("../../layouts/MainLayout.vue"),
+    redirect: "/buyer/orders",
+    meta: {
+      title: "买家中心",
+      icon: "ShoppingCart",
+    },
+    children: [
+      {
+        path: "/buyer/orders",
+        name: "BuyerOrders",
+        component: () => import("../../views/buyer/Orders/index.vue"),
+        meta: {
+          title: "我的订单",
+          icon: "Document",
+        },
+      },
+    ],
+  },
+  {
+    path: "/admin",
+    component: () => import("../../layouts/MainLayout.vue"),
+    redirect: "/admin/waybill",
+    meta: {
+      title: "管理员中心",
+      icon: "Management",
+    },
+    children: [
+      {
+        path: "/admin/waybill",
+        name: "AdminWaybill",
+        component: () => import("../../views/admin/Waybill/index.vue"),
+        meta: {
+          title: "运单管理",
+          icon: "Tickets",
+        },
+      },
+    ],
+  },
+  {
     path: "/order",
     component: () => import("../../layouts/MainLayout.vue"),
     redirect: "/order/list",
@@ -69,47 +129,6 @@ export const asyncRoutes: AppRouteRecordRaw[] = [
           title: "创建订单",
           icon: "Plus",
           noCache: true,
-        },
-      },
-    ],
-  },
-  {
-    path: "/warehouse",
-    component: () => import("../../layouts/MainLayout.vue"),
-    redirect: "/warehouse/list",
-    meta: {
-      title: "仓库管理",
-      icon: "Box",
-    },
-    children: [
-      {
-        path: "/warehouse/list",
-        name: "WarehouseList",
-        component: () =>
-          import("../../views/warehouse/WarehouseList/index.vue"),
-        meta: {
-          title: "仓库列表",
-          icon: "List",
-        },
-      },
-      {
-        path: "/warehouse/inventory",
-        name: "WarehouseInventory",
-        component: () =>
-          import("../../views/warehouse/WarehouseInventory/index.vue"),
-        meta: {
-          title: "库存管理",
-          icon: "Goods",
-        },
-      },
-      {
-        path: "/warehouse/inventory-list",
-        name: "InventoryList",
-        component: () =>
-          import("../../views/warehouse/InventoryList/index.vue"),
-        meta: {
-          title: "库存列表（新）",
-          icon: "Goods",
         },
       },
     ],
@@ -141,15 +160,6 @@ export const asyncRoutes: AppRouteRecordRaw[] = [
         meta: {
           title: "运输跟踪",
           icon: "Location",
-        },
-      },
-      {
-        path: "/transport/shipment",
-        name: "ShipmentList",
-        component: () => import("../../views/transport/ShipmentList/index.vue"),
-        meta: {
-          title: "货运管理（新）",
-          icon: "Van",
         },
       },
     ],

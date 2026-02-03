@@ -1,6 +1,7 @@
 package com.example.demo.entity;
 
 import com.example.demo.dto.RoutePlanResponse.TrackPoint;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class Order {
@@ -23,6 +24,9 @@ public class Order {
     private String createTime;
     private int duration;  // 预计时长(秒)
     private List<TrackPoint> trackPoints;
+    private LocalDateTime shipTime;     // 发货时间
+    private LocalDateTime receiveTime;  // 签收时间
+    private LocalDateTime cancelTime;   // 取消时间
 
     public Order() {}
 
@@ -65,4 +69,10 @@ public class Order {
     public void setDuration(int duration) { this.duration = duration; }
     public List<TrackPoint> getTrackPoints() { return trackPoints; }
     public void setTrackPoints(List<TrackPoint> trackPoints) { this.trackPoints = trackPoints; }
+    public LocalDateTime getShipTime() { return shipTime; }
+    public void setShipTime(LocalDateTime shipTime) { this.shipTime = shipTime; }
+    public LocalDateTime getReceiveTime() { return receiveTime; }
+    public void setReceiveTime(LocalDateTime receiveTime) { this.receiveTime = receiveTime; }
+    public LocalDateTime getCancelTime() { return cancelTime; }
+    public void setCancelTime(LocalDateTime cancelTime) { this.cancelTime = cancelTime; }
 }

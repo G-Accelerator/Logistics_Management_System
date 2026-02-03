@@ -11,13 +11,17 @@ export const useUserStore = defineStore("user", () => {
 
   // 登录
   const login = async (username: string, password: string) => {
-    const res = await authApi.login({ username, password });
-    if (res.code === 200 && res.data) {
-      token.value = res.data.token;
-      userInfo.value = res.data.userInfo;
-      localStorage.setItem("token", res.data.token);
+    // 响应拦截器已自动解包 ApiResponse，直接拿到 LoginResponse
+    const data: authApi.LoginResponse = await authApi.login({
+      username,
+      password,
+    });
+    if (data && data.token) {
+      token.value = data.token;
+      userInfo.value = data.userInfo;
+      localStorage.setItem("token", data.token);
     } else {
-      throw new Error(res.message || "登录失败");
+      throw new Error("登录失败");
     }
   };
 
@@ -34,11 +38,12 @@ export const useUserStore = defineStore("user", () => {
 
   // 获取用户信息
   const getUserInfo = async () => {
-    const res = await authApi.getUserInfo();
-    if (res.code === 200 && res.data) {
-      userInfo.value = res.data;
+    // 响应拦截器已自动解包 ApiResponse，直接拿到 UserInfo
+    const data: authApi.UserInfo = await authApi.getUserInfo();
+    if (data) {
+      userInfo.value = data;
     } else {
-      throw new Error(res.message || "获取用户信息失败");
+      throw new Error("获取用户信息失败");
     }
   };
 
