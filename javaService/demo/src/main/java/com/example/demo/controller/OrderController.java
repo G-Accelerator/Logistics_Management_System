@@ -214,6 +214,7 @@ public class OrderController {
      */
     @PostMapping("/plan-route")
     public ResponseEntity<ApiResponse<RoutePlanResponse>> planRoute(@RequestBody RoutePlanRequest request) {
+    System.out.println("[DEVTOOLS] Hot reload test v2 - planRoute called");
         RoutePlanResponse response = aMapService.planRoute(request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }

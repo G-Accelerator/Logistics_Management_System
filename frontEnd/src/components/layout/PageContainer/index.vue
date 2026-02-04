@@ -33,11 +33,15 @@ withDefaults(defineProps<PageContainerProps>(), {
 .page-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .page-header {
   margin-bottom: 0;
+}
+
+.page-header :deep(.el-card__body) {
+  padding: 12px 20px;
 }
 
 .header-content {
@@ -51,16 +55,16 @@ withDefaults(defineProps<PageContainerProps>(), {
 }
 
 .page-title {
-  margin: 0 0 8px 0;
-  font-size: 20px;
+  margin: 0;
+  font-size: 16px;
   font-weight: 600;
   color: #333;
 }
 
 .page-description {
-  margin: 0;
-  font-size: 14px;
-  color: #666;
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: #999;
 }
 
 .header-right {

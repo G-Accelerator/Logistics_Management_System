@@ -91,12 +91,7 @@ import { useUserStore } from "../store/user";
 import { useTagsViewStore } from "../store/tagsView";
 import SidebarItem from "../components/layout/SidebarItem/index.vue";
 import TagsView from "../components/layout/TagsView/index.vue";
-import {
-  constantRoutes,
-  asyncRoutes,
-  buyerRoutes,
-  sellerRoutes,
-} from "../router";
+import { getAccessibleRoutes } from "../router";
 import type { AppRouteRecordRaw } from "../types/router";
 
 const router = useRouter();
@@ -112,20 +107,12 @@ const cachedViews = computed(() => tagsViewStore.cachedViews);
 
 // 获取所有菜单路由（根据角色过滤）
 const menuRoutes = computed(() => {
-  const role = userStore.userInfo?.role;
+  // 触发响应式更新
+  userStore.userInfo?.role;
+  userStore.buyerPhone;
+  userStore.sellerPhone;
 
-  // 买家只显示买家专属路由
-  if (role === "buyer" || userStore.buyerPhone) {
-    return filterMenuRoutes([...constantRoutes, ...buyerRoutes]);
-  }
-
-  // 卖家只显示卖家专属路由
-  if (role === "seller" || userStore.sellerPhone) {
-    return filterMenuRoutes([...constantRoutes, ...sellerRoutes]);
-  }
-
-  // 管理员显示所有路由
-  return filterMenuRoutes([...constantRoutes, ...asyncRoutes]);
+  return filterMenuRoutes(getAccessibleRoutes());
 });
 
 // 过滤菜单路由

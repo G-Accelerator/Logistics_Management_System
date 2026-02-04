@@ -91,7 +91,21 @@
             style="width: 100%"
             v-loading="loading"
           >
-            <el-table-column prop="orderNo" label="订单号" width="180" />
+            <el-table-column prop="orderNo" label="订单号" width="200">
+              <template #default="{ row }">
+                <div style="display: flex; align-items: center; gap: 4px">
+                  <span style="overflow: hidden; text-overflow: ellipsis">{{
+                    row.orderNo
+                  }}</span>
+                  <el-button
+                    size="small"
+                    :icon="DocumentCopy"
+                    link
+                    @click.stop="copyOrderNo(row.orderNo)"
+                  />
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column prop="receiverName" label="收货人" width="100" />
             <el-table-column
               prop="destination"
@@ -164,6 +178,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 import {
   Plus,
   Search,
@@ -172,6 +187,7 @@ import {
   Clock,
   CircleCheck,
   Refresh,
+  DocumentCopy,
 } from "@element-plus/icons-vue";
 import {
   getOrders,
@@ -215,6 +231,16 @@ const statusMap: Record<string, { text: string; type: string }> = {
 
 const getStatusType = (status: string) => statusMap[status]?.type || "info";
 const getStatusText = (status: string) => statusMap[status]?.text || status;
+
+// 复制订单号
+const copyOrderNo = async (orderNo: string) => {
+  try {
+    await navigator.clipboard.writeText(orderNo);
+    ElMessage.success("已复制");
+  } catch {
+    ElMessage.warning("复制失败");
+  }
+};
 
 const loadData = async () => {
   loading.value = true;

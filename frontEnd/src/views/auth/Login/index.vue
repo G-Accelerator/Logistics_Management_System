@@ -364,5 +364,16 @@ const handlePhoneLogin = async () => {
 .code-input .el-button {
   width: 120px;
   flex-shrink: 0;
+  background: transparent;
+  border: 1px solid #6366f1;
+  color: #6366f1;
+}
+.code-input .el-button:hover {
+  background: rgba(99, 102, 241, 0.1);
+}
+.code-input .el-button:disabled {
+  background: transparent;
+  border-color: #d1d5db;
+  color: #9ca3af;
 }
 </style>

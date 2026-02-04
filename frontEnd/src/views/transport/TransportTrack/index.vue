@@ -31,12 +31,12 @@
                 查询轨迹
               </el-button>
               <el-button
-                :icon="Refresh"
                 :loading="loading"
                 :disabled="!trackInfo"
                 @click="handleRefresh"
-                title="刷新"
-              />
+              >
+                刷新
+              </el-button>
               <el-button @click="handleReset">重置</el-button>
             </el-form-item>
           </el-form>
@@ -119,13 +119,7 @@
 import { ref, reactive, onMounted, onUnmounted, onActivated } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
-import {
-  ZoomIn,
-  ZoomOut,
-  Aim,
-  DocumentCopy,
-  Refresh,
-} from "@element-plus/icons-vue";
+import { ZoomIn, ZoomOut, Aim, DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import { getOrder, getTrackPoints, getStationStatus } from "../../../api/order";
 import type { TrackInfo, TrackPoint } from "./types";
@@ -672,7 +666,25 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
+  overflow: hidden;
+}
+
+.search-card,
+.info-card {
+  flex-shrink: 0;
+}
+
+.timeline-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-card :deep(.el-card__body) {
+  flex: 1;
+  padding: 16px;
+  overflow: hidden;
 }
 
 .track-map {
@@ -703,10 +715,6 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.timeline-card :deep(.el-card__body) {
-  padding: 16px;
 }
 
 .timeline-content {

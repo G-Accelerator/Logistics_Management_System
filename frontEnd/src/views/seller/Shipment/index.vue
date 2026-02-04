@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import { h, ref, computed } from "vue";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
-import { Van } from "@element-plus/icons-vue";
+import { Van, DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
 import { getSellerOrders, shipOrder, batchShip } from "../../../api/order";
@@ -59,9 +59,40 @@ const expressCompanyMap: Record<string, string> = {
   deppon: "德邦快递",
 };
 
+// 复制订单号
+const copyOrderNo = async (orderNo: string) => {
+  try {
+    await navigator.clipboard.writeText(orderNo);
+    ElMessage.success("已复制");
+  } catch {
+    ElMessage.warning("复制失败");
+  }
+};
+
 // 表格列配置
 const columns = [
-  { prop: "orderNo", label: "订单号", width: 180 },
+  {
+    prop: "orderNo",
+    label: "订单号",
+    width: 200,
+    render: (row: any) =>
+      h("div", { style: "display: flex; align-items: center; gap: 4px;" }, [
+        h(
+          "span",
+          { style: "overflow: hidden; text-overflow: ellipsis;" },
+          row.orderNo,
+        ),
+        h(ElButton, {
+          size: "small",
+          icon: DocumentCopy,
+          link: true,
+          onClick: (e: Event) => {
+            e.stopPropagation();
+            copyOrderNo(row.orderNo);
+          },
+        }),
+      ]),
+  },
   { prop: "cargoName", label: "货物名称", minWidth: 120 },
   {
     prop: "expressCompany",

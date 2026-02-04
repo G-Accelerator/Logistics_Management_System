@@ -24,8 +24,8 @@
     "lng" : 116.470334,
     "lat" : 39.996505,
     "passed" : false,
-    "arrivalStatus" : "pending",
-    "arrivalTime" : null,
+    "arrivalStatus" : "arrived",
+    "arrivalTime" : "2026-02-04 17:48:14",
     "current" : false
   }, {
     "time" : "",
@@ -34,8 +34,8 @@
     "lng" : 117.20784,
     "lat" : 38.917591,
     "passed" : false,
-    "arrivalStatus" : "pending",
-    "arrivalTime" : null,
+    "arrivalStatus" : "arrived",
+    "arrivalTime" : "2026-02-04 17:48:43",
     "current" : false
   }, {
     "time" : "",
