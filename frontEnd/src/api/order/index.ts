@@ -71,6 +71,27 @@ export function getBuyerStats(): Promise<{
 }
 
 /**
+ * 卖家订单列表（根据token自动过滤）
+ */
+export function getSellerOrders(
+  params: Omit<OrderQueryParams, "senderPhone">,
+): Promise<PageResult<Order>> {
+  return request.get("/orders/seller", { params });
+}
+
+/**
+ * 卖家订单统计（根据token自动过滤）
+ */
+export function getSellerStats(): Promise<{
+  total: number;
+  pending: number;
+  shipping: number;
+  completed: number;
+}> {
+  return request.get("/orders/seller/stats");
+}
+
+/**
  * 获取单个订单
  */
 export function getOrder(orderNo: string): Promise<Order> {

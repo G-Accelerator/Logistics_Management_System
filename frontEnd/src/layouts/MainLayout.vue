@@ -91,7 +91,12 @@ import { useUserStore } from "../store/user";
 import { useTagsViewStore } from "../store/tagsView";
 import SidebarItem from "../components/layout/SidebarItem/index.vue";
 import TagsView from "../components/layout/TagsView/index.vue";
-import { constantRoutes, asyncRoutes, buyerRoutes } from "../router";
+import {
+  constantRoutes,
+  asyncRoutes,
+  buyerRoutes,
+  sellerRoutes,
+} from "../router";
 import type { AppRouteRecordRaw } from "../types/router";
 
 const router = useRouter();
@@ -107,12 +112,20 @@ const cachedViews = computed(() => tagsViewStore.cachedViews);
 
 // 获取所有菜单路由（根据角色过滤）
 const menuRoutes = computed(() => {
+  const role = userStore.userInfo?.role;
+
   // 买家只显示买家专属路由
-  const isBuyer = userStore.userInfo?.role === "buyer" || userStore.buyerPhone;
-  const routes = isBuyer
-    ? [...constantRoutes, ...buyerRoutes]
-    : [...constantRoutes, ...asyncRoutes];
-  return filterMenuRoutes(routes);
+  if (role === "buyer" || userStore.buyerPhone) {
+    return filterMenuRoutes([...constantRoutes, ...buyerRoutes]);
+  }
+
+  // 卖家只显示卖家专属路由
+  if (role === "seller" || userStore.sellerPhone) {
+    return filterMenuRoutes([...constantRoutes, ...sellerRoutes]);
+  }
+
+  // 管理员显示所有路由
+  return filterMenuRoutes([...constantRoutes, ...asyncRoutes]);
 });
 
 // 过滤菜单路由
@@ -176,7 +189,10 @@ const handleCommand = async (command: string) => {
         cancelButtonText: "取消",
         type: "warning",
       });
-      userStore.logout();
+      // 清除所有标签页
+      await tagsViewStore.delAllViews();
+      // 退出登录
+      await userStore.logout();
       ElMessage.success("已退出登录");
       router.push("/login");
     } catch {

@@ -1,8 +1,13 @@
 import { createRouter, createWebHistory } from "vue-router";
 import type { RouteRecordRaw } from "vue-router";
-import { constantRoutes, asyncRoutes, buyerRoutes } from "./routes";
+import {
+  constantRoutes,
+  asyncRoutes,
+  buyerRoutes,
+  sellerRoutes,
+} from "./routes";
 
-export { constantRoutes, asyncRoutes, buyerRoutes };
+export { constantRoutes, asyncRoutes, buyerRoutes, sellerRoutes };
 export type { AppRouteRecordRaw, RouteMeta } from "./routes";
 
 const router = createRouter({
@@ -11,6 +16,7 @@ const router = createRouter({
     ...constantRoutes,
     ...asyncRoutes,
     ...buyerRoutes,
+    ...sellerRoutes,
   ] as RouteRecordRaw[],
 });
 
@@ -18,6 +24,7 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem("token");
   const buyerPhone = localStorage.getItem("buyerPhone");
+  const sellerPhone = localStorage.getItem("sellerPhone");
 
   // 白名单路由，无需登录
   const whiteList = ["/login", "/recruit"];
@@ -43,6 +50,23 @@ router.beforeEach((to, _from, next) => {
     );
     if (!isAllowed) {
       next("/buyer/orders");
+      return;
+    }
+  }
+
+  // 卖家角色限制访问
+  if (sellerPhone) {
+    const sellerAllowedPaths = [
+      "/seller/shipment",
+      "/seller/orders",
+      "/transport/track",
+      "/dashboard",
+    ];
+    const isAllowed = sellerAllowedPaths.some(
+      (path) => to.path === path || to.path.startsWith(path),
+    );
+    if (!isAllowed) {
+      next("/seller/shipment");
       return;
     }
   }

@@ -11,10 +11,21 @@ export function login(data: LoginRequest): Promise<LoginResponse> {
 }
 
 /**
- * 买家手机号登录
+ * 发送验证码
  */
-export function loginByPhone(phone: string): Promise<LoginResponse> {
-  return request.post("/auth/login/phone", { phone });
+export function sendVerifyCode(phone: string): Promise<void> {
+  return request.post("/auth/send-code", { phone });
+}
+
+/**
+ * 买家/卖家手机号登录
+ */
+export function loginByPhone(
+  phone: string,
+  code: string,
+  role: "buyer" | "seller" = "buyer",
+): Promise<LoginResponse> {
+  return request.post("/auth/login/phone", { phone, code, role });
 }
 
 /**

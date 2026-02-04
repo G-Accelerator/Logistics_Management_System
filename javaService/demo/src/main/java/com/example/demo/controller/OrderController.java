@@ -89,7 +89,46 @@ public class OrderController {
                     .body(ApiResponse.error(401, "未登录或非买家用户"));
         }
         
-        Map<String, Object> stats = orderService.getStatsByPhone(phone);
+        Map<String, Object> stats = orderService.getStatsByPhone(phone, "receiver");
+        return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+
+    /**
+     * 卖家订单列表（根据token自动获取手机号过滤）
+     */
+    @GetMapping("/seller")
+    public ResponseEntity<ApiResponse<PageResult<Order>>> getSellerOrders(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String orderNo,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String cargoName) {
+        
+        String phone = getPhoneFromToken(authorization);
+        if (phone == null || phone.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未登录或非卖家用户"));
+        }
+        
+        PageResult<Order> result = orderService.getOrdersBySenderPhone(page, pageSize, orderNo, status, cargoName, phone);
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    /**
+     * 卖家订单统计（根据token自动获取手机号过滤）
+     */
+    @GetMapping("/seller/stats")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSellerStats(
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        
+        String phone = getPhoneFromToken(authorization);
+        if (phone == null || phone.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未登录或非卖家用户"));
+        }
+        
+        Map<String, Object> stats = orderService.getStatsByPhone(phone, "sender");
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
 

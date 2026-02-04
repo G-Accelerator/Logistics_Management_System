@@ -9,6 +9,7 @@ export const useUserStore = defineStore("user", () => {
   const userInfo = ref<UserInfo | null>(null);
   const token = ref<string>(localStorage.getItem("token") || "");
   const buyerPhone = ref<string>(localStorage.getItem("buyerPhone") || "");
+  const sellerPhone = ref<string>(localStorage.getItem("sellerPhone") || "");
 
   // 账号密码登录
   const login = async (username: string, password: string) => {
@@ -20,22 +21,41 @@ export const useUserStore = defineStore("user", () => {
       token.value = data.token;
       userInfo.value = data.userInfo;
       buyerPhone.value = "";
+      sellerPhone.value = "";
       localStorage.setItem("token", data.token);
       localStorage.removeItem("buyerPhone");
+      localStorage.removeItem("sellerPhone");
     } else {
       throw new Error("登录失败");
     }
   };
 
-  // 买家手机号登录
-  const loginByPhone = async (phone: string) => {
-    const data: authApi.LoginResponse = await authApi.loginByPhone(phone);
+  // 手机号登录（买家/卖家）
+  const loginByPhone = async (
+    phone: string,
+    code: string,
+    role: "buyer" | "seller",
+  ) => {
+    const data: authApi.LoginResponse = await authApi.loginByPhone(
+      phone,
+      code,
+      role,
+    );
     if (data && data.token) {
       token.value = data.token;
       userInfo.value = data.userInfo;
-      buyerPhone.value = phone;
+      if (role === "buyer") {
+        buyerPhone.value = phone;
+        sellerPhone.value = "";
+        localStorage.setItem("buyerPhone", phone);
+        localStorage.removeItem("sellerPhone");
+      } else {
+        sellerPhone.value = phone;
+        buyerPhone.value = "";
+        localStorage.setItem("sellerPhone", phone);
+        localStorage.removeItem("buyerPhone");
+      }
       localStorage.setItem("token", data.token);
-      localStorage.setItem("buyerPhone", phone);
     } else {
       throw new Error("验证失败");
     }
@@ -49,8 +69,10 @@ export const useUserStore = defineStore("user", () => {
       token.value = "";
       userInfo.value = null;
       buyerPhone.value = "";
+      sellerPhone.value = "";
       localStorage.removeItem("token");
       localStorage.removeItem("buyerPhone");
+      localStorage.removeItem("sellerPhone");
     }
   };
 
@@ -67,14 +89,19 @@ export const useUserStore = defineStore("user", () => {
   // 是否为买家角色
   const isBuyer = () => userInfo.value?.role === "buyer";
 
+  // 是否为卖家角色
+  const isSeller = () => userInfo.value?.role === "seller";
+
   return {
     userInfo,
     token,
     buyerPhone,
+    sellerPhone,
     login,
     loginByPhone,
     logout,
     getUserInfo,
     isBuyer,
+    isSeller,
   };
 });

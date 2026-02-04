@@ -117,7 +117,7 @@
           </template>
           <div class="quick-actions">
             <el-button
-              v-if="!isBuyer"
+              v-if="!isBuyer && !isSeller"
               type="primary"
               :icon="Plus"
               class="action-btn"
@@ -133,6 +133,15 @@
               @click="handleMyOrders"
             >
               我的订单
+            </el-button>
+            <el-button
+              v-if="isSeller"
+              type="primary"
+              :icon="Van"
+              class="action-btn"
+              @click="handleMyShipment"
+            >
+              我的发货
             </el-button>
             <el-button
               type="success"
@@ -169,6 +178,8 @@ import {
   getOrderStats,
   getBuyerOrders,
   getBuyerStats,
+  getSellerOrders,
+  getSellerStats,
 } from "../../../api/order";
 import { useUserStore } from "../../../store/user";
 
@@ -179,6 +190,11 @@ const loading = ref(false);
 // 是否为买家
 const isBuyer = computed(
   () => userStore.userInfo?.role === "buyer" || !!userStore.buyerPhone,
+);
+
+// 是否为卖家
+const isSeller = computed(
+  () => userStore.userInfo?.role === "seller" || !!userStore.sellerPhone,
 );
 
 const stats = ref({
@@ -211,6 +227,14 @@ const loadData = async () => {
       ]);
       stats.value = statsData;
       recentOrders.value = ordersData.data;
+    } else if (isSeller.value) {
+      // 卖家使用专用接口
+      const [statsData, ordersData] = await Promise.all([
+        getSellerStats(),
+        getSellerOrders({ page: 1, pageSize: 5 }),
+      ]);
+      stats.value = statsData;
+      recentOrders.value = ordersData.data;
     } else {
       // 管理员/其他用户
       const [statsData, ordersData] = await Promise.all([
@@ -227,10 +251,14 @@ const loadData = async () => {
   }
 };
 
-const handleViewMore = () =>
-  router.push(isBuyer.value ? "/buyer/orders" : "/order/list");
+const handleViewMore = () => {
+  if (isBuyer.value) return router.push("/buyer/orders");
+  if (isSeller.value) return router.push("/seller/shipment");
+  return router.push("/order/list");
+};
 const handleCreateOrder = () => router.push("/order/create");
 const handleMyOrders = () => router.push("/buyer/orders");
+const handleMyShipment = () => router.push("/seller/shipment");
 const handleTrack = () => router.push("/transport/track");
 
 onMounted(() => {

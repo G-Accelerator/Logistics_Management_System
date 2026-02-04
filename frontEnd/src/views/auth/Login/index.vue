@@ -15,10 +15,16 @@
           账号登录
         </span>
         <span
-          :class="['tab-item', { active: loginType === 'phone' }]"
-          @click="loginType = 'phone'"
+          :class="['tab-item', { active: loginType === 'buyer' }]"
+          @click="loginType = 'buyer'"
         >
           买家查询
+        </span>
+        <span
+          :class="['tab-item', { active: loginType === 'seller' }]"
+          @click="loginType = 'seller'"
+        >
+          卖家查询
         </span>
       </div>
 
@@ -64,7 +70,7 @@
         </el-form-item>
       </el-form>
 
-      <!-- 手机号登录（买家） -->
+      <!-- 手机号登录（买家/卖家） -->
       <el-form
         v-else
         ref="phoneFormRef"
@@ -76,11 +82,34 @@
         <el-form-item prop="phone">
           <el-input
             v-model="phoneForm.phone"
-            placeholder="请输入收货手机号"
+            :placeholder="
+              loginType === 'buyer' ? '请输入收货手机号' : '请输入发货手机号'
+            "
             prefix-icon="Phone"
             size="large"
             maxlength="11"
           />
+        </el-form-item>
+
+        <el-form-item prop="code">
+          <div class="code-input">
+            <el-input
+              v-model="phoneForm.code"
+              placeholder="请输入验证码"
+              prefix-icon="Message"
+              size="large"
+              maxlength="6"
+            />
+            <el-button
+              type="primary"
+              size="large"
+              :loading="sendingCode"
+              :disabled="countdown > 0"
+              @click="handleSendCode"
+            >
+              {{ countdown > 0 ? `${countdown}s` : "获取验证码" }}
+            </el-button>
+          </div>
         </el-form-item>
 
         <el-form-item>
@@ -91,14 +120,15 @@
             class="login-button"
             @click="handlePhoneLogin"
           >
-            查询订单
+            {{ loginType === "buyer" ? "查询订单" : "查询发货" }}
           </el-button>
         </el-form-item>
       </el-form>
 
       <div class="login-tips">
         <p v-if="loginType === 'account'">默认账号：admin / 123456</p>
-        <p v-else>输入收货手机号查询您的订单</p>
+        <p v-else-if="loginType === 'buyer'">输入收货手机号查询您的订单</p>
+        <p v-else>输入发货手机号查询您的发货记录</p>
       </div>
     </div>
   </div>
@@ -110,6 +140,7 @@ import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import type { FormInstance, FormRules } from "element-plus";
 import { useUserStore } from "../../../store/user";
+import { sendVerifyCode } from "../../../api/auth";
 import type { LoginForm } from "../../../store/user";
 
 const router = useRouter();
@@ -118,7 +149,9 @@ const userStore = useUserStore();
 const loginFormRef = ref<FormInstance>();
 const phoneFormRef = ref<FormInstance>();
 const loading = ref(false);
-const loginType = ref<"account" | "phone">("account");
+const sendingCode = ref(false);
+const countdown = ref(0);
+const loginType = ref<"account" | "buyer" | "seller">("account");
 
 const loginForm = reactive<LoginForm>({
   username: "admin",
@@ -127,6 +160,7 @@ const loginForm = reactive<LoginForm>({
 
 const phoneForm = reactive({
   phone: "",
+  code: "",
 });
 
 const loginRules: FormRules = {
@@ -146,11 +180,37 @@ const phoneRules: FormRules = {
       trigger: "blur",
     },
   ],
+  code: [
+    { required: true, message: "请输入验证码", trigger: "blur" },
+    { len: 6, message: "验证码为6位数字", trigger: "blur" },
+  ],
+};
+
+// 发送验证码
+const handleSendCode = async () => {
+  if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
+    ElMessage.warning("请先输入正确的手机号");
+    return;
+  }
+
+  sendingCode.value = true;
+  try {
+    await sendVerifyCode(phoneForm.phone);
+    ElMessage.success("验证码已发送，请查看后端控制台");
+    countdown.value = 60;
+    const timer = setInterval(() => {
+      countdown.value--;
+      if (countdown.value <= 0) clearInterval(timer);
+    }, 1000);
+  } catch (error) {
+    ElMessage.error("发送验证码失败");
+  } finally {
+    sendingCode.value = false;
+  }
 };
 
 const handleLogin = async () => {
   if (!loginFormRef.value) return;
-
   await loginFormRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true;
@@ -169,16 +229,18 @@ const handleLogin = async () => {
 
 const handlePhoneLogin = async () => {
   if (!phoneFormRef.value) return;
-
   await phoneFormRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true;
       try {
-        await userStore.loginByPhone(phoneForm.phone);
+        const role = loginType.value === "buyer" ? "buyer" : "seller";
+        await userStore.loginByPhone(phoneForm.phone, phoneForm.code, role);
         ElMessage.success("验证成功");
-        router.push("/buyer/orders");
+        router.push(
+          loginType.value === "buyer" ? "/buyer/orders" : "/seller/shipment",
+        );
       } catch (error) {
-        ElMessage.error("验证失败，请检查手机号");
+        ElMessage.error("验证失败，请检查验证码");
       } finally {
         loading.value = false;
       }
@@ -197,7 +259,6 @@ const handlePhoneLogin = async () => {
   position: relative;
   overflow: hidden;
 }
-
 .login-container::before {
   content: "";
   position: absolute;
@@ -213,7 +274,6 @@ const handlePhoneLogin = async () => {
   background-size: 50px 50px;
   animation: moveBackground 20s linear infinite;
 }
-
 @keyframes moveBackground {
   0% {
     transform: translate(0, 0);
@@ -222,7 +282,6 @@ const handlePhoneLogin = async () => {
     transform: translate(50px, 50px);
   }
 }
-
 .login-box {
   width: 420px;
   padding: 40px;
@@ -232,45 +291,37 @@ const handlePhoneLogin = async () => {
   position: relative;
   z-index: 1;
 }
-
 .login-header {
   text-align: center;
   margin-bottom: 40px;
 }
-
 .login-header h2 {
   margin: 0 0 10px 0;
   font-size: 28px;
   font-weight: 600;
-  color: var(--text-primary);
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-
 .login-header p {
   margin: 0;
   font-size: 14px;
   color: var(--text-tertiary);
 }
-
 .login-form {
   margin-top: 20px;
 }
-
 .login-button {
   width: 100%;
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border: none;
   transition: all 0.3s;
 }
-
 .login-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
 }
-
 .login-tips {
   margin-top: 20px;
   text-align: center;
@@ -280,30 +331,38 @@ const handlePhoneLogin = async () => {
   font-size: 12px;
   color: var(--text-tertiary);
 }
-
 .login-tabs {
   display: flex;
   justify-content: center;
-  gap: 32px;
+  gap: 24px;
   margin-bottom: 24px;
 }
-
 .tab-item {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text-secondary);
   cursor: pointer;
   padding-bottom: 8px;
   border-bottom: 2px solid transparent;
   transition: all 0.3s;
 }
-
 .tab-item:hover {
   color: #6366f1;
 }
-
 .tab-item.active {
   color: #6366f1;
   border-bottom-color: #6366f1;
   font-weight: 500;
+}
+.code-input {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+.code-input .el-input {
+  flex: 1;
+}
+.code-input .el-button {
+  width: 120px;
+  flex-shrink: 0;
 }
 </style>

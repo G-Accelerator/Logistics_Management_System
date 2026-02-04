@@ -38,12 +38,27 @@ public class AuthController {
     }
 
     /**
-     * 买家手机号登录
+     * 发送验证码
+     */
+    @PostMapping("/send-code")
+    public ResponseEntity<ApiResponse<Void>> sendVerifyCode(@RequestBody PhoneLoginRequest request) {
+        try {
+            authService.sendVerifyCode(request.getPhone());
+            return ResponseEntity.ok(ApiResponse.success("验证码已发送", null));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+
+    /**
+     * 买家/卖家手机号登录
      */
     @PostMapping("/login/phone")
     public ResponseEntity<ApiResponse<LoginResponse>> loginByPhone(@RequestBody PhoneLoginRequest request) {
         try {
-            LoginResponse response = authService.loginByPhone(request.getPhone());
+            String role = request.getRole() != null ? request.getRole() : "buyer";
+            LoginResponse response = authService.loginByPhone(request.getPhone(), request.getCode(), role);
             return ResponseEntity.ok(ApiResponse.success("验证成功", response));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

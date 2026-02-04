@@ -86,8 +86,8 @@ export const buyerRoutes: AppRouteRecordRaw[] = [
   },
 ];
 
-// 动态路由（根据权限加载，非买家用户）
-export const asyncRoutes: AppRouteRecordRaw[] = [
+// 卖家专属路由
+export const sellerRoutes: AppRouteRecordRaw[] = [
   {
     path: "/seller",
     component: () => import("../../layouts/MainLayout.vue"),
@@ -106,8 +106,42 @@ export const asyncRoutes: AppRouteRecordRaw[] = [
           icon: "Van",
         },
       },
+      {
+        path: "/seller/orders",
+        name: "SellerOrders",
+        component: () => import("../../views/seller/Orders/index.vue"),
+        meta: {
+          title: "运输列表",
+          icon: "List",
+        },
+      },
     ],
   },
+  {
+    path: "/transport",
+    component: () => import("../../layouts/MainLayout.vue"),
+    redirect: "/transport/track",
+    meta: {
+      title: "物流查询",
+      icon: "Van",
+    },
+    children: [
+      {
+        path: "/transport/track",
+        name: "TransportTrack",
+        component: () =>
+          import("../../views/transport/TransportTrack/index.vue"),
+        meta: {
+          title: "运输跟踪",
+          icon: "Location",
+        },
+      },
+    ],
+  },
+];
+
+// 动态路由（管理员路由）
+export const asyncRoutes: AppRouteRecordRaw[] = [
   {
     path: "/order",
     component: () => import("../../layouts/MainLayout.vue"),
@@ -150,22 +184,12 @@ export const asyncRoutes: AppRouteRecordRaw[] = [
   {
     path: "/transport",
     component: () => import("../../layouts/MainLayout.vue"),
-    redirect: "/transport/list",
+    redirect: "/transport/track",
     meta: {
-      title: "运输管理",
+      title: "物流查询",
       icon: "Van",
     },
     children: [
-      {
-        path: "/transport/list",
-        name: "TransportList",
-        component: () =>
-          import("../../views/transport/TransportList/index.vue"),
-        meta: {
-          title: "运输列表",
-          icon: "List",
-        },
-      },
       {
         path: "/transport/track",
         name: "TransportTrack",

@@ -192,12 +192,21 @@ public class OrderService {
     }
 
     /**
-     * 根据手机号获取订单统计（买家专用）
+     * 根据手机号获取订单统计
+     * @param phone 手机号
+     * @param type "receiver" 或 "sender"
      */
-    public Map<String, Object> getStatsByPhone(String phone) {
-        List<Order> filtered = orders.stream()
-            .filter(o -> phone.equals(o.getReceiverPhone()))
-            .toList();
+    public Map<String, Object> getStatsByPhone(String phone, String type) {
+        List<Order> filtered;
+        if ("sender".equals(type)) {
+            filtered = orders.stream()
+                .filter(o -> phone.equals(o.getSenderPhone()))
+                .toList();
+        } else {
+            filtered = orders.stream()
+                .filter(o -> phone.equals(o.getReceiverPhone()))
+                .toList();
+        }
         
         long total = filtered.size();
         long pending = filtered.stream().filter(o -> "pending".equals(o.getStatus())).count();
@@ -210,5 +219,25 @@ public class OrderService {
             "shipping", shipping,
             "completed", completed
         );
+    }
+
+    /**
+     * 根据发货人手机号查询订单（卖家专用）
+     */
+    public PageResult<Order> getOrdersBySenderPhone(int page, int pageSize, String orderNo,
+                                                     String status, String cargoName, String senderPhone) {
+        List<Order> filtered = orders.stream()
+            .filter(o -> senderPhone.equals(o.getSenderPhone()))
+            .filter(o -> orderNo == null || orderNo.isEmpty() || o.getOrderNo().contains(orderNo))
+            .filter(o -> status == null || status.isEmpty() || o.getStatus().equals(status))
+            .filter(o -> cargoName == null || cargoName.isEmpty() || 
+                (o.getCargoName() != null && o.getCargoName().contains(cargoName)))
+            .toList();
+
+        int start = (page - 1) * pageSize;
+        int end = Math.min(start + pageSize, filtered.size());
+
+        List<Order> pageData = start < filtered.size() ? filtered.subList(start, end) : List.of();
+        return new PageResult<>(pageData, filtered.size());
     }
 }

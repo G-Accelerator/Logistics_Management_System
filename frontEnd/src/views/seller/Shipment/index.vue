@@ -21,7 +21,7 @@ import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
 import { Van } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
-import { getOrders, shipOrder, batchShip } from "../../../api/order";
+import { getSellerOrders, shipOrder, batchShip } from "../../../api/order";
 
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
 const selectedOrders = ref<any[]>([]);
@@ -172,10 +172,10 @@ const renderToolbarLeft = () =>
       `批量发货${hasSelection.value ? ` (${selectedOrders.value.length})` : ""}`,
   );
 
-// 从后端API加载数据 - 只加载待发货订单
+// 从后端API加载数据 - 只加载卖家的待发货订单
 const loadData = async (params: any) => {
   try {
-    const result = await getOrders({
+    const result = await getSellerOrders({
       page: params.page,
       pageSize: params.pageSize,
       orderNo: params.orderNo,
