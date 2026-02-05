@@ -35,6 +35,7 @@ export interface Operation {
   label: string;
   type?: "primary" | "success" | "warning" | "danger" | "info";
   handler: (row: any, index: number) => void;
+  show?: (row: any) => boolean;
 }
 
 export interface DataTableProps {

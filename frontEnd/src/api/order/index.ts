@@ -7,11 +7,15 @@ import type {
   RoutePlanResponse,
   RouteTrackPoint,
   CreateOrderRequest,
+  ShipRequest,
   BatchResult,
   OperationLog,
   StationInfo,
   StationArriveResponse,
   BatchStationArriveResponse,
+  ImportResult,
+  ImportError,
+  ExportRequest,
 } from "./types";
 
 export type {
@@ -23,12 +27,16 @@ export type {
   RouteOptionData,
   RouteTrackPoint,
   CreateOrderRequest,
+  ShipRequest,
   BatchResult,
   OperationLog,
   StationInfo,
   StationStatus,
   StationArriveResponse,
   BatchStationArriveResponse,
+  ImportResult,
+  ImportError,
+  ExportRequest,
 } from "./types";
 
 export function getOrders(
@@ -92,10 +100,13 @@ export function getSellerStats(): Promise<{
 }
 
 /**
- * 获取单个订单
+ * 获取单个订单（支持订单号或运单号查询）
  */
-export function getOrder(orderNo: string): Promise<Order> {
-  return request.get(`/orders/${orderNo}`);
+export function getOrder(
+  no: string,
+  type: "orderNo" | "trackingNo" = "orderNo",
+): Promise<Order> {
+  return request.get(`/orders/${no}`, { params: { type } });
 }
 
 /**
@@ -110,6 +121,15 @@ export function createOrder(data: CreateOrderRequest): Promise<Order> {
  */
 export function deleteOrder(orderNo: string): Promise<boolean> {
   return request.delete(`/orders/${orderNo}`);
+}
+
+/**
+ * 批量删除订单
+ */
+export function batchDeleteOrders(
+  orderNos: string[],
+): Promise<{ total: number; deleted: number; failed: number }> {
+  return request.delete("/orders/batch", { data: orderNos });
 }
 
 /**
@@ -133,8 +153,8 @@ export function planRouteApi(
 /**
  * 发货操作
  */
-export function shipOrder(orderNo: string): Promise<Order> {
-  return request.put(`/orders/${orderNo}/ship`);
+export function shipOrder(orderNo: string, data: ShipRequest): Promise<Order> {
+  return request.put(`/orders/${orderNo}/ship`, data);
 }
 
 /**
@@ -212,4 +232,46 @@ export function markStationsArrivedTo(
   targetIndex: number,
 ): Promise<BatchStationArriveResponse> {
   return request.put(`/orders/${orderNo}/stations/arrive-to/${targetIndex}`);
+}
+
+// ==================== 导入导出 API ====================
+
+/**
+ * 下载导入模板
+ */
+export function downloadTemplate(): Promise<Blob> {
+  return request.get("/orders/template", {
+    responseType: "blob",
+  });
+}
+
+/**
+ * 导入订单
+ */
+export function importOrders(file: File): Promise<ImportResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return request.post("/orders/import", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+}
+
+/**
+ * 导出订单
+ */
+export function exportOrders(data: ExportRequest): Promise<Blob> {
+  return request.post("/orders/export", data, {
+    responseType: "blob",
+  });
+}
+
+/**
+ * 下载失败记录
+ */
+export function downloadErrors(errors: ImportError[]): Promise<Blob> {
+  return request.post("/orders/import/errors", errors, {
+    responseType: "blob",
+  });
 }

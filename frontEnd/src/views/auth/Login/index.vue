@@ -12,19 +12,19 @@
           :class="['tab-item', { active: loginType === 'account' }]"
           @click="loginType = 'account'"
         >
-          账号登录
+          管理员登录
         </span>
         <span
           :class="['tab-item', { active: loginType === 'buyer' }]"
           @click="loginType = 'buyer'"
         >
-          买家查询
+          收货人登录
         </span>
         <span
           :class="['tab-item', { active: loginType === 'seller' }]"
           @click="loginType = 'seller'"
         >
-          卖家查询
+          发货人登录
         </span>
       </div>
 

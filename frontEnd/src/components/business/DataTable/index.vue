@@ -215,15 +215,16 @@
         >
           <template #default="scope">
             <slot name="operation" :row="scope.row" :$index="scope.$index">
-              <el-button
-                v-for="btn in operations"
-                :key="btn.label"
-                :type="btn.type || 'primary'"
-                link
-                @click="btn.handler(scope.row, scope.$index)"
-              >
-                {{ btn.label }}
-              </el-button>
+              <template v-for="btn in operations" :key="btn.label">
+                <el-button
+                  v-if="!btn.show || btn.show(scope.row)"
+                  :type="btn.type || 'primary'"
+                  link
+                  @click="btn.handler(scope.row, scope.$index)"
+                >
+                  {{ btn.label }}
+                </el-button>
+              </template>
             </slot>
           </template>
         </el-table-column>

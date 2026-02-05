@@ -6,10 +6,22 @@
         <!-- 查询表单 -->
         <el-card class="search-card">
           <el-form :model="searchForm" label-width="80px">
-            <el-form-item label="运单号">
+            <el-form-item label="查询方式">
+              <el-radio-group v-model="searchForm.queryType" size="small">
+                <el-radio-button value="orderNo">订单号</el-radio-button>
+                <el-radio-button value="trackingNo">运单号</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item
+              :label="searchForm.queryType === 'orderNo' ? '订单号' : '运单号'"
+            >
               <el-input
                 v-model="searchForm.trackingNo"
-                placeholder="请输入运单号"
+                :placeholder="
+                  searchForm.queryType === 'orderNo'
+                    ? '请输入订单号'
+                    : '请输入运单号'
+                "
                 clearable
                 @keyup.enter="handleSearch"
               >
@@ -145,7 +157,10 @@ const expressCompanyMap: Record<string, string> = {
 
 // 状态
 const loading = ref(false);
-const searchForm = reactive({ trackingNo: "" });
+const searchForm = reactive({
+  trackingNo: "",
+  queryType: "orderNo" as "orderNo" | "trackingNo",
+});
 const trackInfo = ref<TrackInfo | null>(null);
 const trackPoints = ref<TrackPoint[]>([]);
 
@@ -419,14 +434,16 @@ const clearTrack = () => {
 // 查询轨迹
 const handleSearch = async () => {
   if (!searchForm.trackingNo) {
-    ElMessage.warning("请输入运单号");
+    ElMessage.warning(
+      searchForm.queryType === "orderNo" ? "请输入订单号" : "请输入运单号",
+    );
     return;
   }
 
   loading.value = true;
   try {
-    // 获取订单信息
-    const order = await getOrder(searchForm.trackingNo);
+    // 根据查询类型获取订单信息
+    const order = await getOrder(searchForm.trackingNo, searchForm.queryType);
     if (!order) {
       ElMessage.warning("未找到该订单");
       return;
@@ -610,6 +627,7 @@ const handleSearch = async () => {
 // 重置
 const handleReset = () => {
   searchForm.trackingNo = "";
+  searchForm.queryType = "orderNo";
   trackInfo.value = null;
   trackPoints.value = [];
   clearTrack();

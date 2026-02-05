@@ -6,25 +6,35 @@
       :columns="columns"
       :load-data="loadData"
       :show-toolbar="true"
-      :show-selection="true"
-      :toolbar-left="renderToolbarLeft"
+      :show-selection="false"
       :operations="operations"
       :operation-width="120"
-      @selection-change="handleSelectionChange"
+    />
+
+    <!-- 发货抽屉 -->
+    <ship-drawer
+      v-model="shipDialogVisible"
+      :order="currentOrder"
+      @success="handleShipSuccess"
     />
   </page-container>
 </template>
 
 <script setup lang="ts">
-import { h, ref, computed } from "vue";
-import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
-import { Van, DocumentCopy } from "@element-plus/icons-vue";
+import { h, ref } from "vue";
+import { ElButton, ElTag, ElMessage } from "element-plus";
+import { DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
-import { getSellerOrders, shipOrder, batchShip } from "../../../api/order";
+import ShipDrawer from "../../../components/business/ShipDrawer/index.vue";
+import { getSellerOrders } from "../../../api/order";
+import type { Order } from "../../../api/order/types";
 
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
-const selectedOrders = ref<any[]>([]);
+
+// 发货弹窗状态
+const shipDialogVisible = ref(false);
+const currentOrder = ref<Order | null>(null);
 
 // 搜索配置
 const searchConfig = [
@@ -74,7 +84,7 @@ const columns = [
   {
     prop: "orderNo",
     label: "订单号",
-    width: 200,
+    width: 180,
     render: (row: any) =>
       h("div", { style: "display: flex; align-items: center; gap: 4px;" }, [
         h(
@@ -92,6 +102,30 @@ const columns = [
           },
         }),
       ]),
+  },
+  {
+    prop: "trackingNo",
+    label: "运单号",
+    width: 180,
+    render: (row: any) =>
+      row.trackingNo
+        ? h("div", { style: "display: flex; align-items: center; gap: 4px;" }, [
+            h(
+              "span",
+              { style: "overflow: hidden; text-overflow: ellipsis;" },
+              row.trackingNo,
+            ),
+            h(ElButton, {
+              size: "small",
+              icon: DocumentCopy,
+              link: true,
+              onClick: (e: Event) => {
+                e.stopPropagation();
+                copyOrderNo(row.trackingNo);
+              },
+            }),
+          ])
+        : h("span", { style: "color: #999;" }, "-"),
   },
   { prop: "cargoName", label: "货物名称", minWidth: 120 },
   {
@@ -119,22 +153,15 @@ const columns = [
   { prop: "createTime", label: "创建时间", width: 160 },
 ];
 
-// 单个发货
-const handleShip = async (row: any) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要发货订单 ${row.orderNo} 吗？`,
-      "确认发货",
-      { type: "warning" },
-    );
-    await shipOrder(row.orderNo);
-    ElMessage.success("发货成功");
-    tableRef.value?.refresh();
-  } catch (error: any) {
-    if (error !== "cancel") {
-      ElMessage.error(error?.message || "发货失败");
-    }
-  }
+// 打开发货弹窗
+const openShipDialog = (row: any) => {
+  currentOrder.value = row;
+  shipDialogVisible.value = true;
+};
+
+// 发货成功回调
+const handleShipSuccess = () => {
+  tableRef.value?.refresh();
 };
 
 // 操作按钮
@@ -142,66 +169,9 @@ const operations = [
   {
     label: "确认发货",
     type: "primary" as const,
-    handler: handleShip,
+    handler: openShipDialog,
   },
 ];
-
-// 选择变化
-const handleSelectionChange = (selection: any[]) => {
-  selectedOrders.value = selection;
-};
-
-// 批量发货
-const handleBatchShip = async () => {
-  if (selectedOrders.value.length === 0) {
-    ElMessage.warning("请选择要发货的订单");
-    return;
-  }
-
-  try {
-    await ElMessageBox.confirm(
-      `确定要批量发货选中的 ${selectedOrders.value.length} 个订单吗？`,
-      "批量发货",
-      { type: "warning" },
-    );
-
-    const orderNos = selectedOrders.value.map((o) => o.orderNo);
-    const result = await batchShip(orderNos);
-
-    if (result.successCount === orderNos.length) {
-      ElMessage.success(`成功发货 ${result.successCount} 个订单`);
-    } else if (result.successCount > 0) {
-      ElMessage.warning(
-        `成功发货 ${result.successCount} 个订单，${result.failedOrders?.length || 0} 个订单发货失败`,
-      );
-    } else {
-      ElMessage.error("批量发货失败");
-    }
-
-    tableRef.value?.refresh();
-  } catch (error: any) {
-    if (error !== "cancel") {
-      ElMessage.error(error?.message || "批量发货失败");
-    }
-  }
-};
-
-// 是否有选中订单
-const hasSelection = computed(() => selectedOrders.value.length > 0);
-
-// 工具栏左侧
-const renderToolbarLeft = () =>
-  h(
-    ElButton,
-    {
-      type: "primary",
-      icon: Van,
-      disabled: !hasSelection.value,
-      onClick: handleBatchShip,
-    },
-    () =>
-      `批量发货${hasSelection.value ? ` (${selectedOrders.value.length})` : ""}`,
-  );
 
 // 从后端API加载数据 - 只加载卖家的待发货订单
 const loadData = async (params: any) => {

@@ -115,7 +115,7 @@ const columns = [
   {
     prop: "orderNo",
     label: "订单号",
-    width: 200,
+    width: 180,
     render: (row: any) =>
       h("div", { style: "display: flex; align-items: center; gap: 4px;" }, [
         h(
@@ -133,6 +133,30 @@ const columns = [
           },
         }),
       ]),
+  },
+  {
+    prop: "trackingNo",
+    label: "运单号",
+    width: 180,
+    render: (row: any) =>
+      row.trackingNo
+        ? h("div", { style: "display: flex; align-items: center; gap: 4px;" }, [
+            h(
+              "span",
+              { style: "overflow: hidden; text-overflow: ellipsis;" },
+              row.trackingNo,
+            ),
+            h(ElButton, {
+              size: "small",
+              icon: DocumentCopy,
+              link: true,
+              onClick: (e: Event) => {
+                e.stopPropagation();
+                copyOrderNo(row.trackingNo);
+              },
+            }),
+          ])
+        : h("span", { style: "color: #999;" }, "-"),
   },
   { prop: "cargoName", label: "货物名称", minWidth: 120 },
   {

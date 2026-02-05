@@ -31,6 +31,7 @@ public class RoutePlanResponse {
         private String description;
         private int distance;
         private int duration;
+        private int tolls; // 收费金额（元）
         private List<TrackPoint> trackPoints;
 
         public RouteOption() {}
@@ -42,6 +43,18 @@ public class RoutePlanResponse {
             this.description = description;
             this.distance = distance;
             this.duration = duration;
+            this.tolls = 0;
+            this.trackPoints = trackPoints;
+        }
+
+        public RouteOption(String label, String tagType, String description, 
+                          int distance, int duration, int tolls, List<TrackPoint> trackPoints) {
+            this.label = label;
+            this.tagType = tagType;
+            this.description = description;
+            this.distance = distance;
+            this.duration = duration;
+            this.tolls = tolls;
             this.trackPoints = trackPoints;
         }
 
@@ -55,6 +68,8 @@ public class RoutePlanResponse {
         public void setDistance(int distance) { this.distance = distance; }
         public int getDuration() { return duration; }
         public void setDuration(int duration) { this.duration = duration; }
+        public int getTolls() { return tolls; }
+        public void setTolls(int tolls) { this.tolls = tolls; }
         public List<TrackPoint> getTrackPoints() { return trackPoints; }
         public void setTrackPoints(List<TrackPoint> trackPoints) { this.trackPoints = trackPoints; }
     }

@@ -1,8 +1,5 @@
 <template>
-  <page-container
-    title="创建订单"
-    description="创建新的物流订单，自动规划推荐路线"
-  >
+  <page-container title="创建订单" description="创建新的物流订单">
     <!-- 订单表单 -->
     <el-card shadow="never" class="order-form-card">
       <el-form
@@ -114,7 +111,7 @@
                   placeholder="请输入起始地址"
                   style="width: 100%"
                   :trigger-on-focus="false"
-                  @select="handleOriginSelect"
+                  @select="(item: any) => handleAddressSelect(item, 'origin')"
                 >
                   <template #prefix
                     ><el-icon><Location /></el-icon
@@ -166,7 +163,9 @@
                   placeholder="请输入目的地址"
                   style="width: 100%"
                   :trigger-on-focus="false"
-                  @select="handleDestSelect"
+                  @select="
+                    (item: any) => handleAddressSelect(item, 'destination')
+                  "
                 >
                   <template #prefix
                     ><el-icon><Position /></el-icon
@@ -203,55 +202,7 @@
             </el-col>
           </el-row>
         </div>
-
-        <!-- 规划路线区块 -->
-        <div class="form-section route-section">
-          <div class="section-title">
-            <el-icon><Guide /></el-icon>路线规划
-          </div>
-          <RoutePlanner
-            ref="routePlannerRef"
-            :origin="orderForm.origin"
-            :destination="orderForm.destination"
-            :origin-coord="originCoord"
-            :dest-coord="destCoord"
-            @update="handleRouteUpdate"
-            @show-map="showMapDialog = true"
-          />
-        </div>
       </el-form>
-    </el-card>
-
-    <!-- 物流站点卡片 -->
-    <el-card v-if="trackPoints.length > 0" shadow="never" class="station-card">
-      <template #header>
-        <div class="station-header">
-          <div class="station-title">
-            <el-icon><Guide /></el-icon>
-            <span>物流站点</span>
-          </div>
-        </div>
-      </template>
-      <div class="station-timeline">
-        <div
-          v-for="(point, index) in trackPoints"
-          :key="index"
-          class="station-item"
-          :class="{
-            'is-start': index === 0,
-            'is-end': index === trackPoints.length - 1,
-          }"
-        >
-          <div class="station-dot">
-            <span class="dot-inner"></span>
-          </div>
-          <div class="station-content">
-            <div class="station-name">{{ point.status }}</div>
-            <div class="station-address">{{ point.location }}</div>
-          </div>
-          <div v-if="index < trackPoints.length - 1" class="station-line"></div>
-        </div>
-      </div>
     </el-card>
 
     <!-- 底部操作按钮 -->
@@ -268,18 +219,11 @@
         >重置</el-button
       >
     </div>
-
-    <!-- 地图弹窗 -->
-    <MapDialog
-      v-model="showMapDialog"
-      title="物流路线地图"
-      :points="mapPoints"
-    />
   </page-container>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import {
   ElMessage,
@@ -287,45 +231,15 @@ import {
   type FormInstance,
   type FormRules,
 } from "element-plus";
-import {
-  Location,
-  Position,
-  Aim,
-  Box,
-  Guide,
-  Check,
-} from "@element-plus/icons-vue";
+import { Location, Position, Aim, Box, Check } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
-import MapDialog from "../../../components/business/MapDialog/index.vue";
-import RoutePlanner from "../../../components/business/RoutePlanner/index.vue";
-import type { MapPoint } from "../../../components/business/MapDialog/types";
-import type {
-  RouteOptionData,
-  RouteTrackPoint,
-} from "../../../components/business/RoutePlanner/types";
 import { createOrder } from "../../../api/order";
 
 const formRef = ref<FormInstance>();
-const routePlannerRef = ref<InstanceType<typeof RoutePlanner>>();
 const router = useRouter();
-const originCoord = ref<[number, number] | null>(null);
-const destCoord = ref<[number, number] | null>(null);
-const trackPoints = ref<RouteTrackPoint[]>([]);
-const showMapDialog = ref(false);
-
-const mapPoints = computed<MapPoint[]>(() => {
-  return trackPoints.value.map((pt, idx) => ({
-    lng: pt.lng,
-    lat: pt.lat,
-    name: pt.status,
-    address: pt.location,
-    isStart: idx === 0,
-    isEnd: idx === trackPoints.value.length - 1,
-  }));
-});
+const submitting = ref(false);
 
 const orderForm = reactive({
-  orderNo: "",
   origin: "北京市朝阳区望京SOHO",
   destination: "上海市浦东新区陆家嘴",
   senderName: "张三",
@@ -339,6 +253,10 @@ const orderForm = reactive({
   cargoQuantity: 20 as number | null,
   remark: "轻拿轻放",
   expressCompany: "sf",
+  originLng: null as number | null,
+  originLat: null as number | null,
+  destLng: null as number | null,
+  destLat: null as number | null,
 });
 
 const cargoTypes = [
@@ -394,25 +312,25 @@ const searchAddress = (query: string, cb: (r: any[]) => void) => {
             .filter((t: any) => t.location)
             .map((t: any) => ({
               value: t.name + (t.district ? ` (${t.district})` : ""),
-              location: t.location,
               name: t.name,
+              lng: t.location.lng,
+              lat: t.location.lat,
             }))
         : [],
     );
   });
 };
 
-const handleOriginSelect = (item: any) => {
-  if (item.location) {
-    originCoord.value = [item.location.lng, item.location.lat];
-    orderForm.origin = item.name;
-  }
-};
-
-const handleDestSelect = (item: any) => {
-  if (item.location) {
-    destCoord.value = [item.location.lng, item.location.lat];
-    orderForm.destination = item.name;
+const handleAddressSelect = (
+  item: { value: string; lng: number; lat: number },
+  type: "origin" | "destination",
+) => {
+  if (type === "origin") {
+    orderForm.originLng = item.lng;
+    orderForm.originLat = item.lat;
+  } else {
+    orderForm.destLng = item.lng;
+    orderForm.destLat = item.lat;
   }
 };
 
@@ -440,11 +358,13 @@ const useCurrentLocation = (type: "origin" | "destination") => {
       }
       if (type === "origin") {
         orderForm.origin = address || `${lng.toFixed(6)}, ${lat.toFixed(6)}`;
-        originCoord.value = [lng, lat];
+        orderForm.originLng = lng;
+        orderForm.originLat = lat;
       } else {
         orderForm.destination =
           address || `${lng.toFixed(6)}, ${lat.toFixed(6)}`;
-        destCoord.value = [lng, lat];
+        orderForm.destLng = lng;
+        orderForm.destLat = lat;
       }
       ElMessage.success(address ? "已获取当前位置" : "已获取坐标位置");
     } else {
@@ -453,25 +373,12 @@ const useCurrentLocation = (type: "origin" | "destination") => {
   });
 };
 
-const handleRouteUpdate = (route: RouteOptionData | null) => {
-  trackPoints.value = route?.trackPoints || [];
-  selectedDuration.value = route?.duration || 0;
-};
-
-const submitting = ref(false);
-const selectedDuration = ref(0);
-
 const submitOrder = async () => {
   if (!formRef.value) return;
   await formRef.value.validate(async (valid) => {
     if (valid) {
-      if (trackPoints.value.length === 0) {
-        ElMessage.warning("请先规划路线");
-        return;
-      }
       submitting.value = true;
       try {
-        // 调用后端创建订单，包含所有字段
         const result = await createOrder({
           cargoName: orderForm.cargoName,
           cargoType: orderForm.cargoType,
@@ -486,8 +393,10 @@ const submitOrder = async () => {
           receiverName: orderForm.receiverName,
           senderPhone: orderForm.senderPhone,
           receiverPhone: orderForm.receiverPhone,
-          duration: selectedDuration.value,
-          trackPoints: trackPoints.value,
+          originLng: orderForm.originLng ?? undefined,
+          originLat: orderForm.originLat ?? undefined,
+          destLng: orderForm.destLng ?? undefined,
+          destLat: orderForm.destLat ?? undefined,
         });
 
         ElMessageBox.confirm(`订单编号：${result.orderNo}`, "订单创建成功", {
@@ -503,7 +412,7 @@ const submitOrder = async () => {
           .catch(() => {
             resetForm();
           });
-      } catch (e) {
+      } catch {
         ElMessage.error("创建订单失败");
       } finally {
         submitting.value = false;
@@ -514,16 +423,11 @@ const submitOrder = async () => {
 
 const resetForm = () => {
   formRef.value?.resetFields();
-  orderForm.orderNo = "";
-  originCoord.value = null;
-  destCoord.value = null;
-  trackPoints.value = [];
-  routePlannerRef.value?.clearRoutes();
 };
 
 onMounted(() => {
   (AMap as any).plugin(
-    ["AMap.Geocoder", "AMap.AutoComplete", "AMap.Geolocation", "AMap.Scale"],
+    ["AMap.Geocoder", "AMap.AutoComplete", "AMap.Geolocation"],
     () => {},
   );
 });
@@ -533,16 +437,13 @@ onMounted(() => {
 .order-form-card {
   margin-bottom: 16px;
 }
-
 .form-section {
   padding: 16px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
-
 .form-section:last-of-type {
   border-bottom: none;
 }
-
 .section-title {
   display: flex;
   align-items: center;
@@ -552,15 +453,9 @@ onMounted(() => {
   color: var(--el-text-color-primary);
   margin-bottom: 16px;
 }
-
 .section-title .el-icon {
   color: var(--el-color-primary);
 }
-
-.route-section {
-  border-bottom: none;
-}
-
 .bottom-actions {
   display: flex;
   justify-content: center;
@@ -568,127 +463,11 @@ onMounted(() => {
   padding: 20px 0;
   margin-top: 16px;
 }
-
 .location-btn {
   cursor: pointer;
   transition: color 0.2s;
 }
-
 .location-btn:hover {
   color: var(--el-color-primary);
-}
-
-/* 站点卡片样式 */
-.station-card {
-  margin-top: 16px;
-}
-
-.station-header {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-}
-
-.station-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.station-title .el-icon {
-  color: var(--el-color-primary);
-  font-size: 18px;
-}
-
-/* 横向时间线样式 */
-.station-timeline {
-  display: flex;
-  align-items: flex-start;
-  padding: 20px 0;
-  overflow-x: auto;
-}
-
-.station-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-  min-width: 140px;
-  flex: 1;
-}
-
-.station-dot {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-}
-
-.station-item.is-start .station-dot {
-  background: #10b981;
-}
-
-.station-item.is-end .station-dot {
-  background: #f59e0b;
-}
-
-.station-item:not(.is-start):not(.is-end) .station-dot {
-  background: #6366f1;
-}
-
-.dot-inner {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #fff;
-}
-
-.station-content {
-  text-align: center;
-  margin-top: 12px;
-  padding: 0 8px;
-}
-
-.station-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  margin-bottom: 4px;
-}
-
-.station-address {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  line-height: 1.4;
-  max-width: 120px;
-  word-break: break-all;
-}
-
-.station-line {
-  position: absolute;
-  top: 10px;
-  left: calc(50% + 10px);
-  width: calc(100% - 20px);
-  height: 2px;
-  background: linear-gradient(90deg, #6366f1 50%, transparent 50%);
-  background-size: 8px 2px;
-}
-
-.station-item.is-start .station-line {
-  background: linear-gradient(90deg, #10b981 50%, transparent 50%);
-  background-size: 8px 2px;
-}
-
-@media (max-width: 768px) {
-  .station-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 </style>

@@ -1,87 +1,81 @@
 <template>
   <div class="route-planner">
-    <!-- 策略选择 -->
-    <div class="strategy-select">
-      <span class="strategy-label">选择路线策略：</span>
-      <el-checkbox-group v-model="selectedStrategies">
-        <el-checkbox :value="0">最快路线</el-checkbox>
-        <el-checkbox :value="1">最短路线</el-checkbox>
-        <el-checkbox :value="2">最省钱</el-checkbox>
-        <el-checkbox :value="4">躲避拥堵</el-checkbox>
-      </el-checkbox-group>
-    </div>
-
-    <!-- 操作按钮 -->
-    <div class="route-actions">
-      <el-button
-        type="primary"
-        @click="planRoute"
-        :loading="loading"
-        :disabled="selectedStrategies.length === 0 || !canPlan"
-      >
-        <el-icon><Van /></el-icon>规划路线
-      </el-button>
-      <el-button
-        v-if="routeOptions.length > 0"
-        type="danger"
-        plain
-        @click="clearRoutes"
-      >
-        <el-icon><Delete /></el-icon>清空路线
-      </el-button>
-      <template v-if="selectedRoute">
-        <div class="route-info">
-          <span class="info-item">
-            <el-icon><Odometer /></el-icon>
-            <span>{{ (selectedRoute.distance / 1000).toFixed(1) }} km</span>
-          </span>
-          <span class="info-item">
-            <el-icon><Timer /></el-icon>
-            <span>{{ formatDuration(selectedRoute.duration) }}</span>
-          </span>
-          <span class="info-item">
-            <el-icon><Flag /></el-icon>
-            <span>{{ selectedRoute.trackPoints.length }} 个站点</span>
-          </span>
-        </div>
-        <el-button type="primary" plain @click="emit('showMap')">
-          <el-icon><MapLocation /></el-icon>查看地图
-        </el-button>
-      </template>
-    </div>
-
-    <!-- 多路线选择 -->
-    <div v-if="routeOptions.length > 0" class="route-options">
-      <div class="route-options-title">选择路线方案：</div>
-      <div class="route-options-list">
-        <div
-          v-for="(route, index) in routeOptions"
-          :key="index"
-          class="route-option-item"
-          :class="{ 'is-selected': selectedRouteIndex === index }"
-          @click="selectRoute(index)"
+    <!-- 顶部操作栏：策略选择 + 按钮 -->
+    <div class="planner-header">
+      <div class="strategy-group">
+        <el-checkbox-group v-model="selectedStrategies" size="small">
+          <el-checkbox-button :value="0">速度优先</el-checkbox-button>
+          <el-checkbox-button :value="1">费用优先</el-checkbox-button>
+          <el-checkbox-button :value="2">距离优先</el-checkbox-button>
+          <el-checkbox-button :value="4">躲避拥堵</el-checkbox-button>
+        </el-checkbox-group>
+      </div>
+      <div class="action-group">
+        <el-button
+          type="primary"
+          size="small"
+          @click="planRoute"
+          :loading="loading"
+          :disabled="selectedStrategies.length === 0 || !canPlan"
         >
-          <div class="route-option-header">
-            <el-tag :type="route.tagType" size="small">{{
-              route.label
-            }}</el-tag>
-            <span v-if="selectedRouteIndex === index" class="selected-badge">
-              <el-icon><Check /></el-icon>已选
-            </span>
-          </div>
-          <div class="route-option-info">
-            <span class="route-stat">
-              <el-icon><Odometer /></el-icon>
-              {{ (route.distance / 1000).toFixed(1) }} km
-            </span>
-            <span class="route-stat">
-              <el-icon><Timer /></el-icon>
-              {{ formatDuration(route.duration) }}
-            </span>
-          </div>
-          <div class="route-option-desc">{{ route.description }}</div>
+          规划路线
+        </el-button>
+        <el-button
+          v-if="routeOptions.length > 0"
+          size="small"
+          @click="clearRoutes"
+        >
+          清空
+        </el-button>
+        <el-button
+          v-if="selectedRoute"
+          type="primary"
+          size="small"
+          plain
+          @click="emit('showMap')"
+        >
+          <el-icon><MapLocation /></el-icon>地图
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 路线方案列表 -->
+    <div v-if="routeOptions.length > 0" class="route-list">
+      <div
+        v-for="(route, index) in routeOptions"
+        :key="index"
+        class="route-card"
+        :class="{ 'is-selected': selectedRouteIndex === index }"
+        @click="selectRoute(index)"
+      >
+        <div class="route-card-header">
+          <el-tag :type="route.tagType" size="small" effect="plain">
+            {{ route.label }}
+          </el-tag>
+          <el-icon v-if="selectedRouteIndex === index" class="check-icon">
+            <Check />
+          </el-icon>
+        </div>
+        <div class="route-card-stats">
+          <span class="stat-item">
+            <el-icon><Odometer /></el-icon>
+            {{ (route.distance / 1000).toFixed(1) }}km
+          </span>
+          <span class="stat-item">
+            <el-icon><Timer /></el-icon>
+            {{ formatDuration(route.duration) }}
+          </span>
+          <span v-if="route.tolls > 0" class="stat-item toll">
+            ¥{{ route.tolls }}
+          </span>
+          <span v-else class="stat-item free">免费</span>
         </div>
       </div>
+    </div>
+
+    <!-- 空状态 -->
+    <div v-else class="empty-state">
+      <span>选择策略后点击"规划路线"</span>
     </div>
   </div>
 </template>
@@ -89,15 +83,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { ElMessage } from "element-plus";
-import {
-  Van,
-  Delete,
-  MapLocation,
-  Odometer,
-  Timer,
-  Check,
-  Flag,
-} from "@element-plus/icons-vue";
+import { MapLocation, Odometer, Timer, Check } from "@element-plus/icons-vue";
 import { planRouteApi } from "../../../api/order";
 import type {
   RouteStrategy,
@@ -118,116 +104,110 @@ const selectedRouteIndex = ref(0);
 const selectedStrategies = ref<RouteStrategy[]>([0]);
 const generatedStrategies = ref<Set<RouteStrategy>>(new Set());
 
-// 当前选中的路线
 const selectedRoute = computed(
   () => routeOptions.value[selectedRouteIndex.value] || null,
 );
 
-// 是否可以规划（需要起点和终点）
 const canPlan = computed(() => !!props.origin && !!props.destination);
 
-// 监听地址变化，清空路线
 watch(
   () => [props.origin, props.destination],
-  () => {
-    clearRoutes();
-  },
+  () => clearRoutes(),
 );
 
-// 监听选中路线变化，通知父组件
-watch(selectedRoute, (route) => {
-  emit("update", route);
-});
+watch(selectedRoute, (route) => emit("update", route));
 
 const formatDuration = (s: number) => {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
-  return h > 0 ? `${h}小时${m}分钟` : `${m}分钟`;
+  return h > 0 ? `${h}h${m}m` : `${m}分钟`;
 };
 
-// 地理编码：地址转坐标
 const geocodeAddress = (address: string): Promise<[number, number] | null> =>
   new Promise((resolve) => {
     if (typeof AMap === "undefined") {
-      resolve(null);
-      return;
+      console.warn("AMap 未加载");
+      return resolve(null);
     }
-    new (AMap as any).Geocoder().getLocation(
-      address,
-      (status: string, result: any) => {
-        if (status === "complete" && result.geocodes?.length > 0) {
-          const { lng, lat } = result.geocodes[0].location;
-          resolve([lng, lat]);
-        } else {
-          resolve(null);
-        }
-      },
-    );
+
+    // 确保 Geocoder 插件已加载
+    (AMap as any).plugin("AMap.Geocoder", () => {
+      try {
+        const geocoder = new (AMap as any).Geocoder({ city: "全国" });
+        geocoder.getLocation(address, (status: string, result: any) => {
+          console.log("地理编码结果:", address, status, result);
+          if (status === "complete" && result.geocodes?.length > 0) {
+            const { lng, lat } = result.geocodes[0].location;
+            resolve([lng, lat]);
+          } else {
+            console.warn("地理编码失败:", address, status, result?.info);
+            resolve(null);
+          }
+        });
+      } catch (e) {
+        console.error("地理编码异常:", e);
+        resolve(null);
+      }
+    });
   });
 
 const planRoute = async () => {
-  if (!canPlan.value) {
-    ElMessage.warning("请先输入起始地和目的地");
-    return;
-  }
-  if (selectedStrategies.value.length === 0) {
-    ElMessage.warning("请至少选择一种路线策略");
-    return;
-  }
+  if (!canPlan.value) return ElMessage.warning("请先输入起始地和目的地");
+  if (selectedStrategies.value.length === 0)
+    return ElMessage.warning("请至少选择一种策略");
 
   const newStrategies = selectedStrategies.value.filter(
     (s) => !generatedStrategies.value.has(s),
   );
-
-  if (newStrategies.length === 0) {
-    ElMessage.info("所选策略的路线已生成");
-    return;
-  }
+  if (newStrategies.length === 0) return ElMessage.info("所选策略已生成");
 
   loading.value = true;
-
   try {
-    // 如果没有坐标，先通过前端高德 API 获取
+    // 优先使用传入的坐标，否则用前端 AMap JS SDK 地理编码
     let originCoord = props.originCoord;
     let destCoord = props.destCoord;
 
-    if (!originCoord) {
-      originCoord = await geocodeAddress(props.origin);
+    if (typeof AMap !== "undefined") {
+      if (!originCoord) {
+        originCoord = await geocodeAddress(props.origin);
+      }
+      if (!destCoord) {
+        destCoord = await geocodeAddress(props.destination);
+      }
     }
-    if (!destCoord) {
-      destCoord = await geocodeAddress(props.destination);
+
+    // 必须有坐标才能规划路线
+    if (!originCoord || !destCoord) {
+      ElMessage.error("无法获取地址坐标，请检查地址是否正确");
+      return;
     }
 
     const response = await planRouteApi({
       origin: props.origin,
       destination: props.destination,
-      originCoord: originCoord || undefined,
-      destCoord: destCoord || undefined,
+      originCoord: originCoord,
+      destCoord: destCoord,
       strategies: newStrategies,
     });
 
-    if (response.routes && response.routes.length > 0) {
+    if (response.routes?.length > 0) {
       routeOptions.value = [...routeOptions.value, ...response.routes];
       newStrategies.forEach((s) => generatedStrategies.value.add(s));
-      if (selectedRouteIndex.value === 0 && routeOptions.value.length > 0) {
-        selectRoute(0);
-      }
-      ElMessage.success(`已新增 ${response.routes.length} 条路线`);
+      if (selectedRouteIndex.value === 0) selectRoute(0);
+      ElMessage.success(`已生成 ${response.routes.length} 条路线`);
     } else {
-      ElMessage.warning("未能规划出新路线");
+      ElMessage.warning("未能规划出路线");
     }
-  } catch (e) {
-    console.error("路线规划错误:", e);
-    ElMessage.error("路线规划失败");
+  } catch (e: any) {
+    ElMessage.error(e?.message || "路线规划失败");
   } finally {
     loading.value = false;
   }
 };
 
 const selectRoute = (index: number) => {
-  if (index >= 0 && index < routeOptions.value.length) {
+  if (index >= 0 && index < routeOptions.value.length)
     selectedRouteIndex.value = index;
-  }
 };
 
 const clearRoutes = () => {
@@ -237,7 +217,6 @@ const clearRoutes = () => {
   emit("update", null);
 };
 
-// 暴露方法给父组件
 defineExpose({
   clearRoutes,
   getSelectedRoute: () => selectedRoute.value,
@@ -250,136 +229,97 @@ defineExpose({
   width: 100%;
 }
 
-.strategy-select {
+.planner-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  justify-content: space-between;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
-.strategy-label {
-  font-size: 14px;
-  color: var(--el-text-color-regular);
+.strategy-group {
+  flex-shrink: 0;
 }
 
-.route-actions {
+.action-group {
   display: flex;
   align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.route-info {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 0 16px;
-  border-left: 1px solid var(--el-border-color-lighter);
+.route-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
 }
 
-.info-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  color: var(--el-text-color-regular);
-}
-
-.info-item .el-icon {
-  font-size: 16px;
-  color: var(--el-color-primary);
-}
-
-.route-options {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--el-border-color-lighter);
-}
-
-.route-options-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--el-text-color-primary);
-  margin-bottom: 12px;
-}
-
-.route-options-list {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.route-option-item {
-  flex: 1;
-  min-width: 180px;
-  max-width: 220px;
-  padding: 12px;
-  border: 2px solid var(--el-border-color-light);
-  border-radius: 8px;
+.route-card {
+  padding: 10px 12px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   background: var(--el-bg-color);
 }
 
-.route-option-item:hover {
-  border-color: var(--el-color-primary-light-3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.route-card:hover {
+  border-color: var(--el-color-primary-light-5);
 }
 
-.route-option-item.is-selected {
+.route-card.is-selected {
   border-color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
 }
 
-.route-option-header {
+.route-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
 }
 
-.selected-badge {
+.check-icon {
+  color: var(--el-color-primary);
+  font-size: 16px;
+}
+
+.route-card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.stat-item {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  color: var(--el-text-color-secondary);
+}
+
+.stat-item .el-icon {
   font-size: 12px;
   color: var(--el-color-primary);
+}
+
+.stat-item.toll {
+  color: var(--el-color-warning);
   font-weight: 500;
 }
 
-.route-option-info {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 6px;
+.stat-item.free {
+  color: var(--el-color-success);
+  font-weight: 500;
 }
 
-.route-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.empty-state {
+  margin-top: 16px;
+  padding: 20px;
+  text-align: center;
+  color: var(--el-text-color-placeholder);
   font-size: 13px;
-  color: var(--el-text-color-regular);
-}
-
-.route-stat .el-icon {
-  font-size: 14px;
-  color: var(--el-color-primary);
-}
-
-.route-option-desc {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  line-height: 1.4;
-}
-
-@media (max-width: 768px) {
-  .route-options-list {
-    flex-direction: column;
-  }
-  .route-option-item {
-    min-width: 100%;
-    max-width: 100%;
-  }
+  background: var(--el-fill-color-lighter);
+  border-radius: 6px;
 }
 </style>

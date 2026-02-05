@@ -24,6 +24,8 @@
           v-if="row.status === 'shipping'"
           type="success"
           link
+          :disabled="!isLastStationArrived(row)"
+          :title="isLastStationArrived(row) ? '' : '货物尚未到达目的地'"
           @click="handleReceive(row)"
         >
           签收
@@ -172,6 +174,13 @@
         <el-button @click="stationDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <!-- 发货抽屉 -->
+    <ship-drawer
+      v-model="shipDrawerVisible"
+      :order="currentShipOrder"
+      @success="handleShipSuccess"
+    />
   </page-container>
 </template>
 
@@ -181,9 +190,9 @@ import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
 import { Van, Check, DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
+import ShipDrawer from "../../../components/business/ShipDrawer/index.vue";
 import {
   getOrders,
-  shipOrder,
   receiveOrder,
   cancelOrder,
   batchShip,
@@ -194,7 +203,11 @@ import {
   markAllStationsArrived,
   markStationsArrivedTo,
 } from "../../../api/order";
-import type { OperationLog, StationInfo } from "../../../api/order/types";
+import type {
+  OperationLog,
+  StationInfo,
+  Order,
+} from "../../../api/order/types";
 
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
 const selectedOrders = ref<any[]>([]);
@@ -210,6 +223,10 @@ const currentOrderNo = ref("");
 const markingIndex = ref<number | null>(null);
 const batchLoading = ref(false);
 const targetStationIndex = ref<number | null>(null);
+
+// 发货抽屉状态
+const shipDrawerVisible = ref(false);
+const currentShipOrder = ref<Order | null>(null);
 
 // 状态选项
 const statusOptions = [
@@ -378,21 +395,14 @@ const columns = [
 ];
 
 // 单个发货
-const handleShip = async (row: any) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要发货订单 ${row.orderNo} 吗？`,
-      "确认发货",
-      { type: "warning" },
-    );
-    await shipOrder(row.orderNo);
-    ElMessage.success("发货成功");
-    tableRef.value?.refresh();
-  } catch (error: any) {
-    if (error !== "cancel") {
-      ElMessage.error(error?.message || "发货失败");
-    }
-  }
+const handleShip = (row: any) => {
+  currentShipOrder.value = row as Order;
+  shipDrawerVisible.value = true;
+};
+
+// 发货成功回调
+const handleShipSuccess = () => {
+  tableRef.value?.refresh();
 };
 
 // 单个签收
@@ -464,6 +474,14 @@ const canMarkStation = (index: number): boolean => {
   if (index === 0) return true;
   const prevStation = stationList.value.find((s) => s.index === index - 1);
   return prevStation?.status === "arrived";
+};
+
+// 判断订单最后一个站点是否已到达
+const isLastStationArrived = (row: any): boolean => {
+  const trackPoints = row.trackPoints;
+  if (!trackPoints || trackPoints.length === 0) return false;
+  const lastPoint = trackPoints[trackPoints.length - 1];
+  return lastPoint?.arrivalStatus === "arrived";
 };
 
 // 打开站点管理弹窗

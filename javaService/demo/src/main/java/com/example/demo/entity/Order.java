@@ -22,11 +22,16 @@ public class Order {
     private String receiverPhone;
     private String status;
     private String createTime;
+    private String trackingNo;  // 运单号（发货时生成）
     private int duration;  // 预计时长(秒)
     private List<TrackPoint> trackPoints;
     private LocalDateTime shipTime;     // 发货时间
     private LocalDateTime receiveTime;  // 签收时间
     private LocalDateTime cancelTime;   // 取消时间
+    private Double originLng;   // 发货地经度
+    private Double originLat;   // 发货地纬度
+    private Double destLng;     // 收货地经度
+    private Double destLat;     // 收货地纬度
 
     public Order() {}
 
@@ -65,6 +70,8 @@ public class Order {
     public void setStatus(String status) { this.status = status; }
     public String getCreateTime() { return createTime; }
     public void setCreateTime(String createTime) { this.createTime = createTime; }
+    public String getTrackingNo() { return trackingNo; }
+    public void setTrackingNo(String trackingNo) { this.trackingNo = trackingNo; }
     public int getDuration() { return duration; }
     public void setDuration(int duration) { this.duration = duration; }
     public List<TrackPoint> getTrackPoints() { return trackPoints; }
@@ -75,4 +82,12 @@ public class Order {
     public void setReceiveTime(LocalDateTime receiveTime) { this.receiveTime = receiveTime; }
     public LocalDateTime getCancelTime() { return cancelTime; }
     public void setCancelTime(LocalDateTime cancelTime) { this.cancelTime = cancelTime; }
+    public Double getOriginLng() { return originLng; }
+    public void setOriginLng(Double originLng) { this.originLng = originLng; }
+    public Double getOriginLat() { return originLat; }
+    public void setOriginLat(Double originLat) { this.originLat = originLat; }
+    public Double getDestLng() { return destLng; }
+    public void setDestLng(Double destLng) { this.destLng = destLng; }
+    public Double getDestLat() { return destLat; }
+    public void setDestLat(Double destLat) { this.destLat = destLat; }
 }

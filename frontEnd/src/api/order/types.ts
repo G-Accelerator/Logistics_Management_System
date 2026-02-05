@@ -1,6 +1,7 @@
 export interface Order {
   id?: number;
   orderNo?: string;
+  trackingNo?: string; // 运单号（发货时生成）
   cargoName: string;
   cargoType: string;
   cargoWeight?: number;
@@ -17,6 +18,10 @@ export interface Order {
   status?: string;
   createTime?: string;
   duration?: number; // 预计时长(秒)
+  originLng?: number;
+  originLat?: number;
+  destLng?: number;
+  destLat?: number;
 }
 
 /** 创建订单请求 */
@@ -34,8 +39,16 @@ export interface CreateOrderRequest {
   receiverName: string;
   senderPhone: string;
   receiverPhone: string;
-  duration?: number; // 预计时长(秒)
+  originLng?: number;
+  originLat?: number;
+  destLng?: number;
+  destLat?: number;
+}
+
+/** 发货请求 */
+export interface ShipRequest {
   trackPoints: RouteTrackPoint[];
+  duration: number;
 }
 
 export interface PageResult<T> {
@@ -86,6 +99,7 @@ export interface RouteOptionData {
   description: string;
   distance: number;
   duration: number;
+  tolls: number; // 收费金额（元）
   trackPoints: RouteTrackPoint[];
 }
 
@@ -142,4 +156,28 @@ export interface BatchStationArriveResponse {
   success: boolean;
   message: string;
   arrivedCount: number;
+}
+
+// ==================== 导入导出类型 ====================
+
+/** 导入错误信息 */
+export interface ImportError {
+  row: number; // 行号
+  field: string; // 字段名
+  value: string; // 原始值
+  message: string; // 错误原因
+}
+
+/** 导入结果 */
+export interface ImportResult {
+  total: number; // 总记录数
+  success: number; // 成功数
+  failed: number; // 失败数
+  errors: ImportError[];
+}
+
+/** 导出请求 */
+export interface ExportRequest {
+  ids?: number[]; // 指定导出的订单ID（可选）
+  filters?: OrderQueryParams; // 筛选条件（可选）
 }

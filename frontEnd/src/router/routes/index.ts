@@ -115,6 +115,21 @@ export const asyncRoutes: AppRouteRecordRaw[] = [
       },
     ],
   },
+  // 数据统计 - 仅管理员可见
+  {
+    path: "/statistics",
+    component: () => import("../../layouts/MainLayout.vue"),
+    redirect: "/statistics/report",
+    meta: { title: "数据统计", icon: "DataAnalysis", roles: ["admin"] },
+    children: [
+      {
+        path: "/statistics/report",
+        name: "StatisticsReport",
+        component: () => import("../../views/statistics/Report/index.vue"),
+        meta: { title: "统计报表", icon: "TrendCharts" },
+      },
+    ],
+  },
   // 系统设置 - 仅管理员可见
   {
     path: "/settings",

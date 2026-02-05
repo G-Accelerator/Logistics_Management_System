@@ -19,6 +19,7 @@ export interface RouteOptionData {
   description: string;
   distance: number;
   duration: number;
+  tolls: number; // 收费金额（元）
   trackPoints: RouteTrackPoint[];
 }
 

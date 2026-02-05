@@ -8,7 +8,22 @@
       :show-toolbar="true"
       :toolbar-left="renderToolbarLeft"
       :operations="operations"
-      :operation-width="180"
+      :operation-width="220"
+      :show-selection="true"
+      @selection-change="handleSelectionChange"
+    />
+
+    <!-- 导入对话框 -->
+    <import-dialog
+      v-model="importDialogVisible"
+      @success="handleImportSuccess"
+    />
+
+    <!-- 发货抽屉 -->
+    <ship-drawer
+      v-model="shipDialogVisible"
+      :order="shipOrder"
+      @success="handleShipSuccess"
     />
   </page-container>
 </template>
@@ -17,13 +32,59 @@
 import { h, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
-import { Plus, DocumentCopy } from "@element-plus/icons-vue";
+import {
+  Plus,
+  DocumentCopy,
+  Upload,
+  Download,
+  Delete,
+} from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
-import { getOrders, deleteOrder } from "../../../api/order";
+import ImportDialog from "../../../components/business/ImportDialog/index.vue";
+import ShipDrawer from "../../../components/business/ShipDrawer/index.vue";
+import {
+  getOrders,
+  deleteOrder,
+  batchDeleteOrders,
+  exportOrders,
+} from "../../../api/order";
+import type {
+  Order,
+  ImportResult,
+  ExportRequest,
+} from "../../../api/order/types";
+import { downloadOrderExport } from "../../../utils/file";
 
 const router = useRouter();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
+
+// 导入对话框状态
+const importDialogVisible = ref(false);
+
+// 发货对话框状态
+const shipDialogVisible = ref(false);
+const shipOrder = ref<Order | null>(null);
+
+// 选中的订单
+const selectedOrders = ref<Order[]>([]);
+
+// 当前筛选条件
+const currentFilters = ref<Record<string, any>>({});
+
+// 导出中状态
+const exporting = ref(false);
+
+// 打开发货弹窗
+const openShipDialog = (order: Order) => {
+  shipOrder.value = order;
+  shipDialogVisible.value = true;
+};
+
+// 发货成功回调
+const handleShipSuccess = () => {
+  tableRef.value?.refresh();
+};
 
 // 复制订单号
 const copyOrderNo = async (orderNo: string) => {
@@ -150,6 +211,12 @@ const columns = [
         }),
       ]),
   },
+  {
+    prop: "trackingNo",
+    label: "运单号",
+    width: 180,
+    formatter: (row: any) => row.trackingNo || "-",
+  },
   { prop: "cargoName", label: "货物名称", minWidth: 100 },
   {
     prop: "cargoType",
@@ -224,12 +291,13 @@ const viewTrack = (row: any) => {
 
 // 操作按钮
 const operations = [
-  { label: "查看物流", type: "primary" as const, handler: viewTrack },
   {
-    label: "编辑",
-    type: "warning" as const,
-    handler: (row: any) => ElMessage.info(`编辑订单: ${row.orderNo}`),
+    label: "发货",
+    type: "success" as const,
+    show: (row: any) => row.status === "pending",
+    handler: (row: any) => openShipDialog(row),
   },
+  { label: "查看物流", type: "primary" as const, handler: viewTrack },
   {
     label: "删除",
     type: "danger" as const,
@@ -250,19 +318,134 @@ const operations = [
 
 // 工具栏左侧
 const renderToolbarLeft = () =>
-  h(
-    ElButton,
-    {
-      type: "primary",
-      icon: Plus,
-      onClick: () => router.push("/order/create"),
-    },
-    () => "新建订单",
-  );
+  h("div", { style: "display: flex; gap: 12px;" }, [
+    h(
+      ElButton,
+      {
+        type: "primary",
+        icon: Plus,
+        onClick: () => router.push("/order/create"),
+      },
+      () => "新建订单",
+    ),
+    h(
+      ElButton,
+      {
+        type: "success",
+        icon: Upload,
+        onClick: () => {
+          importDialogVisible.value = true;
+        },
+      },
+      () => "导入订单",
+    ),
+    h(
+      ElButton,
+      {
+        type: "warning",
+        icon: Download,
+        loading: exporting.value,
+        onClick: handleExport,
+      },
+      () =>
+        selectedOrders.value.length > 0
+          ? `导出选中(${selectedOrders.value.length})`
+          : "导出全部",
+    ),
+    selectedOrders.value.length > 0
+      ? h(
+          ElButton,
+          {
+            type: "danger",
+            icon: Delete,
+            onClick: handleBatchDelete,
+          },
+          () => `批量删除(${selectedOrders.value.length})`,
+        )
+      : null,
+  ]);
+
+// 批量删除
+const handleBatchDelete = async () => {
+  if (selectedOrders.value.length === 0) {
+    ElMessage.warning("请选择要删除的订单");
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedOrders.value.length} 条订单吗？`,
+      "批量删除",
+      { type: "warning" },
+    );
+
+    const orderNos = selectedOrders.value
+      .map((o) => o.orderNo)
+      .filter((no): no is string => !!no);
+    const result = await batchDeleteOrders(orderNos);
+    ElMessage.success(`成功删除 ${result.deleted} 条订单`);
+    selectedOrders.value = [];
+    tableRef.value?.refresh();
+  } catch {}
+};
+
+// 处理选择变化
+const handleSelectionChange = (selection: Order[]) => {
+  selectedOrders.value = selection;
+};
+
+// 导入成功回调
+const handleImportSuccess = (result: ImportResult) => {
+  if (result.success > 0) {
+    // 刷新列表
+    tableRef.value?.refresh();
+  }
+};
+
+// 导出订单
+const handleExport = async () => {
+  exporting.value = true;
+  try {
+    const request: ExportRequest = {};
+
+    if (selectedOrders.value.length > 0) {
+      // 导出选中订单
+      request.ids = selectedOrders.value
+        .filter((order) => order.id !== undefined)
+        .map((order) => order.id as number);
+    } else {
+      // 导出当前筛选条件下的全部订单
+      request.filters = {
+        page: 1,
+        pageSize: 10000, // 导出时不分页
+        ...currentFilters.value,
+      };
+    }
+
+    const blob = await exportOrders(request);
+    downloadOrderExport(blob);
+    ElMessage.success("导出成功");
+  } catch {
+    ElMessage.error("导出失败，请重试");
+  } finally {
+    exporting.value = false;
+  }
+};
 
 // 从后端API加载数据
 const loadData = async (params: any) => {
   try {
+    // 保存当前筛选条件（用于导出）
+    currentFilters.value = {
+      orderNo: params.orderNo,
+      status: params.status,
+      cargoType: params.cargoType,
+      cargoName: params.cargoName,
+      expressCompany: params.expressCompany,
+      senderName: params.senderName,
+      receiverName: params.receiverName,
+    };
+
     const result = await getOrders({
       page: params.page,
       pageSize: params.pageSize,

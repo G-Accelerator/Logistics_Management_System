@@ -3,10 +3,14 @@ package com.example.demo.controller;
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.BatchOrderRequest;
 import com.example.demo.dto.BatchResult;
+import com.example.demo.dto.ExportRequest;
+import com.example.demo.dto.ImportError;
+import com.example.demo.dto.ImportResultDTO;
 import com.example.demo.dto.PageResult;
 import com.example.demo.dto.RoutePlanRequest;
 import com.example.demo.dto.RoutePlanResponse;
 import com.example.demo.dto.RoutePlanResponse.TrackPoint;
+import com.example.demo.dto.ShipRequest;
 import com.example.demo.dto.StationInfo;
 import com.example.demo.entity.OperationLog;
 import com.example.demo.entity.Order;
@@ -15,10 +19,22 @@ import com.example.demo.service.AuthService;
 import com.example.demo.service.OrderService;
 import com.example.demo.service.OrderStatusService;
 import com.example.demo.service.StationStatusService;
+import com.example.demo.util.ExcelUtil;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -32,16 +48,19 @@ public class OrderController {
     private final OrderStatusService orderStatusService;
     private final StationStatusService stationStatusService;
     private final AuthService authService;
+    private final ExcelUtil excelUtil;
     
     public OrderController(OrderService orderService, AMapService aMapService, 
                           OrderStatusService orderStatusService,
                           StationStatusService stationStatusService,
-                          AuthService authService) {
+                          AuthService authService,
+                          ExcelUtil excelUtil) {
         this.orderService = orderService;
         this.aMapService = aMapService;
         this.orderStatusService = orderStatusService;
         this.stationStatusService = stationStatusService;
         this.authService = authService;
+        this.excelUtil = excelUtil;
     }
     
     /**
@@ -174,11 +193,18 @@ public class OrderController {
     }
 
     /**
-     * 获取单个订单
+     * 获取单个订单（支持订单号或运单号查询）
      */
-    @GetMapping("/{orderNo}")
-    public ResponseEntity<ApiResponse<Order>> getOrder(@PathVariable String orderNo) {
-        Order order = orderService.getOrder(orderNo);
+    @GetMapping("/{no}")
+    public ResponseEntity<ApiResponse<Order>> getOrder(
+            @PathVariable String no,
+            @RequestParam(defaultValue = "orderNo") String type) {
+        Order order;
+        if ("trackingNo".equals(type)) {
+            order = orderService.getOrderByTrackingNo(no);
+        } else {
+            order = orderService.getOrder(no);
+        }
         if (order == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(404, "订单不存在"));
@@ -198,6 +224,25 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(404, "订单不存在"));
         }
+    }
+
+    /**
+     * 批量删除订单
+     */
+    @DeleteMapping("/batch")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> batchDeleteOrders(@RequestBody List<String> orderNos) {
+        if (orderNos == null || orderNos.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "请选择要删除的订单"));
+        }
+        
+        int deleted = orderService.batchDeleteOrders(orderNos);
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", orderNos.size());
+        result.put("deleted", deleted);
+        result.put("failed", orderNos.size() - deleted);
+        
+        return ResponseEntity.ok(ApiResponse.success("批量删除完成", result));
     }
 
     /**
@@ -226,9 +271,11 @@ public class OrderController {
      * PUT /api/orders/{orderNo}/ship
      */
     @PutMapping("/{orderNo}/ship")
-    public ResponseEntity<ApiResponse<Order>> shipOrder(@PathVariable String orderNo) {
+    public ResponseEntity<ApiResponse<Order>> shipOrder(
+            @PathVariable String orderNo,
+            @RequestBody ShipRequest request) {
         try {
-            Order order = orderStatusService.ship(orderNo);
+            Order order = orderStatusService.ship(orderNo, request.getTrackPoints(), request.getDuration());
             return ResponseEntity.ok(ApiResponse.success("发货成功", order));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -436,6 +483,110 @@ public class OrderController {
             );
             return ResponseEntity.status(statusCode == 404 ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(statusCode, e.getMessage()));
+        }
+    }
+
+    // ==================== 导入导出 API ====================
+
+    /**
+     * 下载导入模板
+     * GET /api/orders/template
+     */
+    @GetMapping("/template")
+    public ResponseEntity<byte[]> downloadTemplate() {
+        try {
+            byte[] templateBytes = excelUtil.generateTemplate();
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            String filename = URLEncoder.encode("订单导入模板.xlsx", StandardCharsets.UTF_8);
+            headers.setContentDispositionFormData("attachment", filename);
+            
+            return new ResponseEntity<>(templateBytes, headers, HttpStatus.OK);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 导入订单
+     * POST /api/orders/import
+     */
+    @PostMapping("/import")
+    public ResponseEntity<ApiResponse<ImportResultDTO>> importOrders(@RequestParam("file") MultipartFile file) {
+        // 验证文件类型
+        String filename = file.getOriginalFilename();
+        if (filename == null || !filename.toLowerCase().endsWith(".xlsx")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(400, "请上传 .xlsx 格式的文件"));
+        }
+        
+        // 验证文件大小（10MB）
+        if (file.getSize() > 10 * 1024 * 1024) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(400, "文件大小不能超过 10MB"));
+        }
+        
+        try {
+            ImportResultDTO result = orderService.importOrders(file);
+            String message = String.format("导入完成：总数 %d，成功 %d，失败 %d", 
+                result.getTotal(), result.getSuccess(), result.getFailed());
+            return ResponseEntity.ok(ApiResponse.success(message, result));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(400, "文件格式错误，请使用模板"));
+        }
+    }
+
+    /**
+     * 导出订单
+     * POST /api/orders/export
+     */
+    @PostMapping("/export")
+    public ResponseEntity<byte[]> exportOrders(@RequestBody(required = false) ExportRequest request) {
+        try {
+            // 如果请求体为空，导出全部订单
+            if (request == null) {
+                request = new ExportRequest();
+            }
+            
+            List<Order> orders = orderService.exportOrders(request);
+            byte[] excelBytes = excelUtil.exportOrders(orders);
+            
+            // 生成文件名：订单数据_yyyyMMdd.xlsx
+            String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+            String filename = URLEncoder.encode("订单数据_" + dateStr + ".xlsx", StandardCharsets.UTF_8);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", filename);
+            
+            return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 下载导入失败记录
+     * POST /api/orders/import/errors
+     */
+    @PostMapping("/import/errors")
+    public ResponseEntity<byte[]> downloadErrors(@RequestBody List<ImportError> errors) {
+        try {
+            byte[] excelBytes = excelUtil.exportErrors(errors);
+            
+            // 生成文件名：导入失败记录_yyyyMMdd.xlsx
+            String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+            String filename = URLEncoder.encode("导入失败记录_" + dateStr + ".xlsx", StandardCharsets.UTF_8);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", filename);
+            
+            return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }
