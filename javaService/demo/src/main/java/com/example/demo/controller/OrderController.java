@@ -90,7 +90,7 @@ public class OrderController {
                     .body(ApiResponse.error(401, "未登录或非买家用户"));
         }
         
-        PageResult<Order> result = orderService.getOrders(page, pageSize, orderNo, status, null, 
+        PageResult<Order> result = orderService.getOrders(page, pageSize, orderNo, null, status, null, 
             cargoName, null, null, null, phone);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
@@ -121,6 +121,7 @@ public class OrderController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String orderNo,
+            @RequestParam(required = false) String trackingNo,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String cargoName) {
         
@@ -130,7 +131,7 @@ public class OrderController {
                     .body(ApiResponse.error(401, "未登录或非卖家用户"));
         }
         
-        PageResult<Order> result = orderService.getOrdersBySenderPhone(page, pageSize, orderNo, status, cargoName, phone);
+        PageResult<Order> result = orderService.getOrdersBySenderPhone(page, pageSize, orderNo, trackingNo, status, cargoName, phone);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 

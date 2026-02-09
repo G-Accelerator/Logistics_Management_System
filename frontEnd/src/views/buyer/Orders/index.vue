@@ -26,7 +26,7 @@
   </page-container>
 </template>
 
-<script setup lang="ts">
+<script setup lang="tsx">
 import { h, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
@@ -101,7 +101,7 @@ const statusTextMap: Record<string, string> = {
 };
 
 // 复制订单号
-const copyOrderNo = async (orderNo: string) => {
+const copy = async (orderNo: string) => {
   try {
     await navigator.clipboard.writeText(orderNo);
     ElMessage.success("已复制");
@@ -129,36 +129,11 @@ const columns = [
           link: true,
           onClick: (e: Event) => {
             e.stopPropagation();
-            copyOrderNo(row.orderNo);
+            copy(row.orderNo);
           },
         }),
       ]),
   },
-  {
-    prop: "trackingNo",
-    label: "运单号",
-    width: 180,
-    render: (row: any) =>
-      row.trackingNo
-        ? h("div", { style: "display: flex; align-items: center; gap: 4px;" }, [
-            h(
-              "span",
-              { style: "overflow: hidden; text-overflow: ellipsis;" },
-              row.trackingNo,
-            ),
-            h(ElButton, {
-              size: "small",
-              icon: DocumentCopy,
-              link: true,
-              onClick: (e: Event) => {
-                e.stopPropagation();
-                copyOrderNo(row.trackingNo);
-              },
-            }),
-          ])
-        : h("span", { style: "color: #999;" }, "-"),
-  },
-  { prop: "cargoName", label: "货物名称", minWidth: 120 },
   {
     prop: "expressCompany",
     label: "快递公司",
@@ -166,6 +141,35 @@ const columns = [
     formatter: (row: any) =>
       expressCompanyMap[row.expressCompany] || row.expressCompany || "-",
   },
+  {
+    prop: "trackingNo",
+    label: "运单号",
+    width: 180,
+    showOverflowTooltip: true,
+    render: (row: any) => {
+      if (!row.trackingNo) {
+        return <span style="color: #999;">-</span>;
+      }
+      return (
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span style="overflow: hidden; text-overflow: ellipsis;">
+            {row.trackingNo}
+          </span>
+          <ElButton
+            size="small"
+            icon={DocumentCopy}
+            link
+            onClick={(e: Event) => {
+              e.stopPropagation();
+              copy(row.trackingNo);
+            }}
+          />
+        </div>
+      );
+    },
+  },
+  { prop: "cargoName", label: "货物名称", minWidth: 120 },
+
   { prop: "senderName", label: "发货人", width: 100 },
   {
     prop: "origin",

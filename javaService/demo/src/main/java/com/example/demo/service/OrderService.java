@@ -348,10 +348,13 @@ public class OrderService {
      * 根据发货人手机号查询订单（卖家专用）
      */
     public PageResult<Order> getOrdersBySenderPhone(int page, int pageSize, String orderNo,
+                                                     String trackingNo,
                                                      String status, String cargoName, String senderPhone) {
         List<Order> filtered = orders.stream()
             .filter(o -> senderPhone.equals(o.getSenderPhone()))
             .filter(o -> orderNo == null || orderNo.isEmpty() || o.getOrderNo().contains(orderNo))
+            .filter(o -> trackingNo == null || trackingNo.isEmpty() || 
+                (o.getTrackingNo() != null && o.getTrackingNo().contains(trackingNo)))
             .filter(o -> status == null || status.isEmpty() || o.getStatus().equals(status))
             .filter(o -> cargoName == null || cargoName.isEmpty() || 
                 (o.getCargoName() != null && o.getCargoName().contains(cargoName)))
