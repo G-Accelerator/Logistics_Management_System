@@ -195,15 +195,15 @@ public class OrderController {
     /**
      * 获取单个订单（支持订单号或运单号查询）
      */
-    @GetMapping("/{no}")
+    @GetMapping("/{queryValue}")
     public ResponseEntity<ApiResponse<Order>> getOrder(
-            @PathVariable String no,
-            @RequestParam(defaultValue = "orderNo") String type) {
+            @PathVariable String queryValue,
+            @RequestParam(defaultValue = "orderNo") String queryType) {
         Order order;
-        if ("trackingNo".equals(type)) {
-            order = orderService.getOrderByTrackingNo(no);
+        if ("trackingNo".equals(queryType)) {
+            order = orderService.getOrderByTrackingNo(queryValue);
         } else {
-            order = orderService.getOrder(no);
+            order = orderService.getOrder(queryValue);
         }
         if (order == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

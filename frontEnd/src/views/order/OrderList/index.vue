@@ -87,7 +87,7 @@ const handleShipSuccess = () => {
 };
 
 // 复制订单号
-const copyOrderNo = async (orderNo: string) => {
+const copy = async (orderNo: string) => {
   try {
     await navigator.clipboard.writeText(orderNo);
     ElMessage.success("已复制");
@@ -206,7 +206,7 @@ const columns = [
           link: true,
           onClick: (e: Event) => {
             e.stopPropagation();
-            copyOrderNo(row.orderNo);
+            copy(row.orderNo);
           },
         }),
       ]),
@@ -215,7 +215,24 @@ const columns = [
     prop: "trackingNo",
     label: "运单号",
     width: 180,
-    formatter: (row: any) => row.trackingNo || "-",
+    showOverflowTooltip: true,
+    render: (row: any) =>
+      h("div", { style: "display: flex; align-items: center; gap: 4px;" }, [
+        h(
+          "span",
+          { style: "overflow: hidden; text-overflow: ellipsis;" },
+          row.trackingNo,
+        ),
+        h(ElButton, {
+          size: "small",
+          icon: DocumentCopy,
+          link: true,
+          onClick: (e: Event) => {
+            e.stopPropagation();
+            copy(row.trackingNo);
+          },
+        }),
+      ]),
   },
   { prop: "cargoName", label: "货物名称", minWidth: 100 },
   {

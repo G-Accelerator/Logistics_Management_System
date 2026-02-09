@@ -13,15 +13,28 @@
               </el-radio-group>
             </el-form-item>
             <el-form-item
-              :label="searchForm.queryType === 'orderNo' ? '订单号' : '运单号'"
+              label="订单号"
+              v-if="searchForm.queryType === 'orderNo'"
             >
               <el-input
+                v-model="searchForm.orderNo"
+                placeholder="请输入订单号"
+                clearable
+                @keyup.enter="handleSearch"
+              >
+                <template #append>
+                  <el-button
+                    :icon="DocumentCopy"
+                    @click="pasteOrderNo"
+                    title="粘贴"
+                  />
+                </template>
+              </el-input>
+            </el-form-item>
+            <el-form-item label="运单号" v-else>
+              <el-input
                 v-model="searchForm.trackingNo"
-                :placeholder="
-                  searchForm.queryType === 'orderNo'
-                    ? '请输入订单号'
-                    : '请输入运单号'
-                "
+                placeholder="请输入运单号"
                 clearable
                 @keyup.enter="handleSearch"
               >
@@ -158,6 +171,7 @@ const expressCompanyMap: Record<string, string> = {
 // 状态
 const loading = ref(false);
 const searchForm = reactive({
+  orderNo: "",
   trackingNo: "",
   queryType: "orderNo" as "orderNo" | "trackingNo",
 });
@@ -177,9 +191,17 @@ const mapReady = ref(false);
 // 检查路由参数并搜索
 const checkRouteAndSearch = () => {
   const orderNo = route.query.orderNo;
-  if (orderNo && typeof orderNo === "string") {
-    searchForm.trackingNo = orderNo;
+  const trackingNo = route.query.trackingNo;
+  if (trackingNo && typeof trackingNo === "string") {
     if (mapReady.value && !loading.value) {
+      searchForm.queryType = "trackingNo";
+      searchForm.trackingNo = trackingNo;
+      handleSearch();
+    }
+  } else if (orderNo && typeof orderNo === "string") {
+    if (mapReady.value && !loading.value) {
+      searchForm.queryType = "orderNo";
+      searchForm.orderNo = orderNo;
       handleSearch();
     }
   }
@@ -201,7 +223,11 @@ const pasteOrderNo = async () => {
   try {
     const text = await navigator.clipboard.readText();
     if (text) {
-      searchForm.trackingNo = text.trim();
+      if (searchForm.queryType === "orderNo") {
+        searchForm.orderNo = text.trim();
+      } else {
+        searchForm.trackingNo = text.trim();
+      }
       ElMessage.success("已粘贴");
     }
   } catch {
@@ -211,7 +237,11 @@ const pasteOrderNo = async () => {
 
 // 刷新当前查询
 const handleRefresh = () => {
-  if (searchForm.trackingNo) {
+  const queryValue =
+    searchForm.queryType === "orderNo"
+      ? searchForm.orderNo
+      : searchForm.trackingNo;
+  if (queryValue) {
     handleSearch();
   }
 };
@@ -433,7 +463,11 @@ const clearTrack = () => {
 
 // 查询轨迹
 const handleSearch = async () => {
-  if (!searchForm.trackingNo) {
+  const queryValue =
+    searchForm.queryType === "orderNo"
+      ? searchForm.orderNo
+      : searchForm.trackingNo;
+  if (!queryValue) {
     ElMessage.warning(
       searchForm.queryType === "orderNo" ? "请输入订单号" : "请输入运单号",
     );
@@ -443,7 +477,7 @@ const handleSearch = async () => {
   loading.value = true;
   try {
     // 根据查询类型获取订单信息
-    const order = await getOrder(searchForm.trackingNo, searchForm.queryType);
+    const order = await getOrder(queryValue, searchForm.queryType);
     if (!order) {
       ElMessage.warning("未找到该订单");
       return;
@@ -469,7 +503,7 @@ const handleSearch = async () => {
         : null;
 
     trackInfo.value = {
-      trackingNo: order.orderNo || searchForm.trackingNo,
+      trackingNo: order.orderNo || queryValue,
       expressCompanyName:
         expressCompanyMap[order.expressCompany || ""] || order.expressCompany,
       origin: order.origin,
@@ -480,10 +514,11 @@ const handleSearch = async () => {
       estimatedTime: estimatedArrival ? formatDateTime(estimatedArrival) : "",
     };
 
-    // 获取站点实际状态（从API获取，而非计算）
+    // 获取站点实际状态（使用订单号）
+    const orderNo = order.orderNo;
     let stationStatusList: StationInfo[] = [];
     try {
-      stationStatusList = await getStationStatus(searchForm.trackingNo);
+      stationStatusList = await getStationStatus(orderNo);
     } catch {
       // 如果获取站点状态失败，回退到获取轨迹点
       console.warn("获取站点状态失败，使用轨迹点数据");
@@ -546,7 +581,7 @@ const handleSearch = async () => {
     }
 
     // 回退逻辑：如果没有站点状态数据，使用原有的轨迹点计算逻辑
-    const points = await getTrackPoints(searchForm.trackingNo);
+    const points = await getTrackPoints(orderNo);
 
     if (points.length === 0) {
       ElMessage.warning("该订单暂无轨迹数据");
@@ -626,6 +661,7 @@ const handleSearch = async () => {
 
 // 重置
 const handleReset = () => {
+  searchForm.orderNo = "";
   searchForm.trackingNo = "";
   searchForm.queryType = "orderNo";
   trackInfo.value = null;
@@ -650,16 +686,7 @@ onMounted(() => {
 
 // keep-alive 激活时检查路由参数（从其他页面返回时）
 onActivated(() => {
-  const orderNo = route.query.orderNo;
-  if (orderNo && typeof orderNo === "string") {
-    // 只有订单号变化时才搜索
-    if (orderNo !== searchForm.trackingNo) {
-      searchForm.trackingNo = orderNo;
-      if (mapReady.value && !loading.value) {
-        handleSearch();
-      }
-    }
-  }
+  checkRouteAndSearch();
 });
 
 onUnmounted(() => {

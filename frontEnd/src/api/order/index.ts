@@ -103,10 +103,10 @@ export function getSellerStats(): Promise<{
  * 获取单个订单（支持订单号或运单号查询）
  */
 export function getOrder(
-  no: string,
-  type: "orderNo" | "trackingNo" = "orderNo",
+  queryValue: string,
+  queryType: "orderNo" | "trackingNo" = "orderNo",
 ): Promise<Order> {
-  return request.get(`/orders/${no}`, { params: { type } });
+  return request.get(`/orders/${queryValue}`, { params: { queryType } });
 }
 
 /**
