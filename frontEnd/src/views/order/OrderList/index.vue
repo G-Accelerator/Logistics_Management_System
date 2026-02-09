@@ -105,6 +105,12 @@ const searchConfig = [
     placeholder: "请输入订单号",
   },
   {
+    prop: "trackingNo",
+    label: "运单号",
+    type: "input" as const,
+    placeholder: "请输入运单号",
+  },
+  {
     prop: "cargoName",
     label: "货物名称",
     type: "input" as const,
@@ -212,6 +218,13 @@ const columns = [
       ]),
   },
   {
+    prop: "expressCompany",
+    label: "快递公司",
+    width: 90,
+    formatter: (row: any) =>
+      expressCompanyMap[row.expressCompany] || row.expressCompany || "-",
+  },
+  {
     prop: "trackingNo",
     label: "运单号",
     width: 180,
@@ -245,13 +258,7 @@ const columns = [
     width: 90,
     formatter: (row: any) => cargoTypeMap[row.cargoType] || row.cargoType,
   },
-  {
-    prop: "expressCompany",
-    label: "快递公司",
-    width: 90,
-    formatter: (row: any) =>
-      expressCompanyMap[row.expressCompany] || row.expressCompany || "-",
-  },
+
   {
     prop: "cargoWeight",
     label: "重量(kg)",
@@ -459,6 +466,7 @@ const loadData = async (params: any) => {
     // 保存当前筛选条件（用于导出）
     currentFilters.value = {
       orderNo: params.orderNo,
+      trackingNo: params.trackingNo,
       status: params.status,
       cargoType: params.cargoType,
       cargoName: params.cargoName,
@@ -471,6 +479,7 @@ const loadData = async (params: any) => {
       page: params.page,
       pageSize: params.pageSize,
       orderNo: params.orderNo,
+      trackingNo: params.trackingNo,
       status: params.status,
       cargoType: params.cargoType,
       cargoName: params.cargoName,

@@ -1,5 +1,6 @@
 package com.example.demo.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 
 /**
@@ -13,6 +14,7 @@ public class OperationLog {
     private String fromStatus;
     private String toStatus;
     private String operator;      // 操作人（预留，当前为 "system"）
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime operateTime;
     private String remark;
 

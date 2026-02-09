@@ -60,6 +60,7 @@ export interface OrderQueryParams {
   page: number;
   pageSize: number;
   orderNo?: string;
+  trackingNo?: string;
   status?: string;
   cargoType?: string;
   cargoName?: string;

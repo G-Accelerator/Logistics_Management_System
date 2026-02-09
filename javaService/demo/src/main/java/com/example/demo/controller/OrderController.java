@@ -171,6 +171,7 @@ public class OrderController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String orderNo,
+            @RequestParam(required = false) String trackingNo,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String cargoType,
             @RequestParam(required = false) String cargoName,
@@ -178,7 +179,7 @@ public class OrderController {
             @RequestParam(required = false) String senderName,
             @RequestParam(required = false) String receiverName,
             @RequestParam(required = false) String receiverPhone) {
-        PageResult<Order> result = orderService.getOrders(page, pageSize, orderNo, status, cargoType, 
+        PageResult<Order> result = orderService.getOrders(page, pageSize, orderNo, trackingNo, status, cargoType, 
             cargoName, expressCompany, senderName, receiverName, receiverPhone);
         return ResponseEntity.ok(ApiResponse.success(result));
     }

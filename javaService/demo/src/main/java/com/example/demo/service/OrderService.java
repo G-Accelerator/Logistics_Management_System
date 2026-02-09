@@ -5,7 +5,9 @@ import com.example.demo.dto.ImportError;
 import com.example.demo.dto.ImportResultDTO;
 import com.example.demo.dto.PageResult;
 import com.example.demo.dto.RoutePlanResponse.TrackPoint;
+import com.example.demo.entity.OperationLog;
 import com.example.demo.entity.Order;
+import com.example.demo.repository.OperationLogRepository;
 import com.example.demo.util.ExcelUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -70,6 +72,9 @@ public class OrderService {
     
     @Autowired
     private AMapService aMapService;
+    
+    @Autowired
+    private OperationLogRepository operationLogRepository;
 
     public OrderService() {
         this.objectMapper = new ObjectMapper();
@@ -96,6 +101,12 @@ public class OrderService {
         orders.add(0, order);
         saveToFile();
         
+        // 记录订单创建日志
+        if (operationLogRepository != null) {
+            OperationLog log = new OperationLog(order.getOrderNo(), "create", null, "pending", "system");
+            operationLogRepository.save(log);
+        }
+        
         log.info("创建订单: {}", order.getOrderNo());
         return order;
     }
@@ -104,17 +115,26 @@ public class OrderService {
      * 查询订单列表
      */
     public PageResult<Order> getOrders(int page, int pageSize, String orderNo,
+                                       String trackingNo,
                                        String status, String cargoType, String cargoName,
                                        String expressCompany, String senderName, String receiverName,
                                        String receiverPhone) {
+        // 转换货物类型代码为中文名称
+        String cargoTypeDisplay = convertCargoType(cargoType);
+        // 转换快递公司代码为中文名称
+        String expressCompanyDisplay = convertExpressCompany(expressCompany);
+        
         List<Order> filtered = orders.stream()
             .filter(o -> orderNo == null || orderNo.isEmpty() || o.getOrderNo().contains(orderNo))
+            .filter(o -> trackingNo == null || trackingNo.isEmpty() || 
+                (o.getTrackingNo() != null && o.getTrackingNo().contains(trackingNo)))
             .filter(o -> status == null || status.isEmpty() || o.getStatus().equals(status))
-            .filter(o -> cargoType == null || cargoType.isEmpty() || o.getCargoType().equals(cargoType))
+            .filter(o -> cargoTypeDisplay == null || cargoTypeDisplay.isEmpty() || 
+                (o.getCargoType() != null && o.getCargoType().equals(cargoTypeDisplay)))
             .filter(o -> cargoName == null || cargoName.isEmpty() || 
                 (o.getCargoName() != null && o.getCargoName().contains(cargoName)))
-            .filter(o -> expressCompany == null || expressCompany.isEmpty() || 
-                expressCompany.equals(o.getExpressCompany()))
+            .filter(o -> expressCompanyDisplay == null || expressCompanyDisplay.isEmpty() || 
+                (o.getExpressCompany() != null && o.getExpressCompany().equals(expressCompanyDisplay)))
             .filter(o -> senderName == null || senderName.isEmpty() || 
                 (o.getSenderName() != null && o.getSenderName().contains(senderName)))
             .filter(o -> receiverName == null || receiverName.isEmpty() || 
@@ -128,6 +148,45 @@ public class OrderService {
 
         List<Order> pageData = start < filtered.size() ? filtered.subList(start, end) : List.of();
         return new PageResult<>(pageData, filtered.size());
+    }
+
+    /**
+     * 货物类型代码转中文名称
+     */
+    private String convertCargoType(String cargoTypeCode) {
+        if (cargoTypeCode == null || cargoTypeCode.isEmpty()) {
+            return null;
+        }
+        return switch (cargoTypeCode) {
+            case "normal" -> "普通";
+            case "fragile" -> "易碎";
+            case "cold" -> "生鲜";
+            case "dangerous" -> "贵重";
+            case "document" -> "文件";
+            default -> cargoTypeCode;
+        };
+    }
+
+    /**
+     * 快递公司代码转中文名称
+     */
+    private String convertExpressCompany(String expressCompanyCode) {
+        if (expressCompanyCode == null || expressCompanyCode.isEmpty()) {
+            return null;
+        }
+        return switch (expressCompanyCode) {
+            case "sf" -> "顺丰速运";
+            case "zto" -> "中通快递";
+            case "yto" -> "圆通速递";
+            case "yd" -> "韵达快递";
+            case "sto" -> "申通快递";
+            case "jd" -> "京东物流";
+            case "ems" -> "邮政EMS";
+            case "deppon" -> "德邦快递";
+            case "jitu" -> "极兔速递";
+            case "best" -> "百世快递";
+            default -> expressCompanyCode;
+        };
     }
 
     /**

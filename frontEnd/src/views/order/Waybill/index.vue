@@ -300,6 +300,8 @@ const statusTextMap: Record<string, string> = {
   shipping: "运输中",
   completed: "已完成",
   cancelled: "已取消",
+  null: "新建",
+  "": "新建",
 };
 
 // 操作类型标签映射
@@ -311,6 +313,7 @@ const actionTagType: Record<
   receive: "success",
   cancel: "danger",
   station_arrive: "warning",
+  create: "info",
 };
 
 // 操作类型文本映射
@@ -319,6 +322,7 @@ const actionTextMap: Record<string, string> = {
   receive: "签收",
   cancel: "取消",
   station_arrive: "站点到达",
+  create: "新建",
 };
 
 // 复制订单号

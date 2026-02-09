@@ -42,8 +42,8 @@ public class StationStatusService {
         OperationLog opLog = new OperationLog();
         opLog.setOrderNo(orderNo);
         opLog.setAction("station_arrive");
-        opLog.setFromStatus("pending");
-        opLog.setToStatus("arrived");
+        opLog.setFromStatus("待到达");
+        opLog.setToStatus("已到达");
         opLog.setOperator("系统");
         opLog.setOperateTime(LocalDateTime.now());
         opLog.setRemark(String.format("站点 %d [%s] 已到达", stationIndex + 1, stationName));
