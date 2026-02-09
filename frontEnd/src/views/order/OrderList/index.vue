@@ -28,7 +28,7 @@
   </page-container>
 </template>
 
-<script setup lang="ts">
+<script setup lang="tsx">
 import { h, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
@@ -86,7 +86,7 @@ const handleShipSuccess = () => {
   tableRef.value?.refresh();
 };
 
-// 复制订单号
+// 复制
 const copy = async (orderNo: string) => {
   try {
     await navigator.clipboard.writeText(orderNo);
@@ -216,23 +216,27 @@ const columns = [
     label: "运单号",
     width: 180,
     showOverflowTooltip: true,
-    render: (row: any) =>
-      h("div", { style: "display: flex; align-items: center; gap: 4px;" }, [
-        h(
-          "span",
-          { style: "overflow: hidden; text-overflow: ellipsis;" },
-          row.trackingNo,
-        ),
-        h(ElButton, {
-          size: "small",
-          icon: DocumentCopy,
-          link: true,
-          onClick: (e: Event) => {
-            e.stopPropagation();
-            copy(row.trackingNo);
-          },
-        }),
-      ]),
+    render: (row: any) => {
+      if (!row.trackingNo) {
+        return <span style="color: #999;">-</span>;
+      }
+      return (
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span style="overflow: hidden; text-overflow: ellipsis;">
+            {row.trackingNo}
+          </span>
+          <ElButton
+            size="small"
+            icon={DocumentCopy}
+            link
+            onClick={(e: Event) => {
+              e.stopPropagation();
+              copy(row.trackingNo);
+            }}
+          />
+        </div>
+      );
+    },
   },
   { prop: "cargoName", label: "货物名称", minWidth: 100 },
   {
