@@ -147,6 +147,7 @@ import { ElMessage } from "element-plus";
 import { ZoomIn, ZoomOut, Aim, DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import { getOrder, getTrackPoints, getStationStatus } from "../../../api/order";
+import { getEnabledExpressCompanies } from "../../../api/system/expressCompany";
 import type { TrackInfo, TrackPoint } from "./types";
 import type { StationInfo } from "../../../api/order/types";
 
@@ -157,15 +158,20 @@ export type { TrackInfo, TrackPoint } from "./types";
 
 const route = useRoute();
 
-// 快递公司映射
-const expressCompanyMap: Record<string, string> = {
-  sf: "顺丰速运",
-  zto: "中通快递",
-  yto: "圆通速递",
-  yd: "韵达快递",
-  sto: "申通快递",
-  jd: "京东物流",
-  deppon: "德邦快递",
+// 快递公司映射（动态生成）
+let expressCompanyMap: Record<string, string> = {};
+
+// 初始化快递公司映射
+const initExpressCompanyMap = async () => {
+  try {
+    const companies = await getEnabledExpressCompanies();
+    expressCompanyMap = {};
+    companies.forEach((c) => {
+      expressCompanyMap[c.code] = c.name;
+    });
+  } catch (error) {
+    console.error("获取快递公司列表失败", error);
+  }
 };
 
 // 状态
@@ -264,6 +270,9 @@ const initMap = () => {
     console.error("请在 index.html 中配置高德地图 API Key");
     return;
   }
+
+  // 初始化快递公司映射
+  initExpressCompanyMap();
 
   map = new AMap.Map("amap-container", {
     zoom: 5,

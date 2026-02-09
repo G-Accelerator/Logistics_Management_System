@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="tsx">
-import { h, ref } from "vue";
+import { h, ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
 import {
@@ -54,6 +54,7 @@ import type {
   ImportResult,
   ExportRequest,
 } from "../../../api/order/types";
+import { getEnabledExpressCompanies } from "../../../api/system/expressCompany";
 import { downloadOrderExport } from "../../../utils/file";
 
 const router = useRouter();
@@ -74,6 +75,22 @@ const currentFilters = ref<Record<string, any>>({});
 
 // 导出中状态
 const exporting = ref(false);
+
+// 快递公司选项
+const expressCompanyOptions = ref<{ label: string; value: string }[]>([]);
+
+// 加载快递公司列表
+const loadExpressCompanies = async () => {
+  try {
+    const companies = await getEnabledExpressCompanies();
+    expressCompanyOptions.value = companies.map((c) => ({
+      label: c.name,
+      value: c.code,
+    }));
+  } catch (error) {
+    console.error("获取快递公司列表失败", error);
+  }
+};
 
 // 打开发货弹窗
 const openShipDialog = (order: Order) => {
@@ -96,8 +113,8 @@ const copy = async (orderNo: string) => {
   }
 };
 
-// 搜索配置
-const searchConfig = [
+// 搜索配置（使用计算属性以支持动态快递公司选项）
+const searchConfig = computed(() => [
   {
     prop: "orderNo",
     label: "订单号",
@@ -142,15 +159,7 @@ const searchConfig = [
     prop: "expressCompany",
     label: "快递公司",
     type: "select" as const,
-    options: [
-      { label: "顺丰速运", value: "sf" },
-      { label: "中通快递", value: "zto" },
-      { label: "圆通速递", value: "yto" },
-      { label: "韵达快递", value: "yd" },
-      { label: "申通快递", value: "sto" },
-      { label: "京东物流", value: "jd" },
-      { label: "德邦快递", value: "deppon" },
-    ],
+    options: expressCompanyOptions.value,
   },
   {
     prop: "senderName",
@@ -164,7 +173,7 @@ const searchConfig = [
     type: "input" as const,
     placeholder: "请输入收货人",
   },
-];
+]);
 
 // 状态映射
 const statusMap: Record<string, { label: string; type: string }> = {
@@ -493,4 +502,9 @@ const loadData = async (params: any) => {
     return { data: [], total: 0 };
   }
 };
+
+// 组件挂载时加载快递公司列表
+onMounted(() => {
+  loadExpressCompanies();
+});
 </script>

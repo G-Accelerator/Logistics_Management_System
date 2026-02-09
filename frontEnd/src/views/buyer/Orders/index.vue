@@ -27,16 +27,33 @@
 </template>
 
 <script setup lang="tsx">
-import { h, ref } from "vue";
+import { h, ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
 import { DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
 import { getBuyerOrders, receiveOrder } from "../../../api/order";
+import { getEnabledExpressCompanies } from "../../../api/system/expressCompany";
 
 const router = useRouter();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
+
+// 快递公司选项
+const expressCompanyOptions = ref<{ label: string; value: string }[]>([]);
+
+// 加载快递公司列表
+const loadExpressCompanies = async () => {
+  try {
+    const companies = await getEnabledExpressCompanies();
+    expressCompanyOptions.value = companies.map((c) => ({
+      label: c.name,
+      value: c.code,
+    }));
+  } catch (error) {
+    console.error("获取快递公司列表失败", error);
+  }
+};
 
 // 状态选项
 const statusOptions = [
@@ -47,8 +64,8 @@ const statusOptions = [
   { label: "已取消", value: "cancelled" },
 ];
 
-// 搜索配置
-const searchConfig = [
+// 搜索配置（使用计算属性以支持动态快递公司选项）
+const searchConfig = computed(() => [
   {
     prop: "orderNo",
     label: "订单号",
@@ -68,7 +85,7 @@ const searchConfig = [
     type: "input" as const,
     placeholder: "请输入货物名称",
   },
-];
+]);
 
 // 快递公司映射
 const expressCompanyMap: Record<string, string> = {
@@ -234,4 +251,9 @@ const loadData = async (params: any) => {
     return { data: [], total: 0 };
   }
 };
+
+// 组件挂载时加载快递公司列表
+onMounted(() => {
+  loadExpressCompanies();
+});
 </script>
