@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="tsx">
-import { h, ref, computed, onMounted } from "vue";
+import { h, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
 import {
@@ -43,6 +43,7 @@ import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
 import ImportDialog from "../../../components/business/ImportDialog/index.vue";
 import ShipDrawer from "../../../components/business/ShipDrawer/index.vue";
+import ExpressCompanySelect from "../../../components/business/ExpressCompanySelect/index.vue";
 import {
   getOrders,
   deleteOrder,
@@ -54,10 +55,11 @@ import type {
   ImportResult,
   ExportRequest,
 } from "../../../api/order/types";
-import { getEnabledExpressCompanies } from "../../../api/system/expressCompany";
 import { downloadOrderExport } from "../../../utils/file";
+import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 const router = useRouter();
+const expressCompanyStore = useExpressCompanyStore();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
 
 // 导入对话框状态
@@ -75,22 +77,6 @@ const currentFilters = ref<Record<string, any>>({});
 
 // 导出中状态
 const exporting = ref(false);
-
-// 快递公司选项
-const expressCompanyOptions = ref<{ label: string; value: string }[]>([]);
-
-// 加载快递公司列表
-const loadExpressCompanies = async () => {
-  try {
-    const companies = await getEnabledExpressCompanies();
-    expressCompanyOptions.value = companies.map((c) => ({
-      label: c.name,
-      value: c.code,
-    }));
-  } catch (error) {
-    console.error("获取快递公司列表失败", error);
-  }
-};
 
 // 打开发货弹窗
 const openShipDialog = (order: Order) => {
@@ -113,8 +99,8 @@ const copy = async (orderNo: string) => {
   }
 };
 
-// 搜索配置（使用计算属性以支持动态快递公司选项）
-const searchConfig = computed(() => [
+// 搜索配置
+const searchConfig = [
   {
     prop: "orderNo",
     label: "订单号",
@@ -158,8 +144,9 @@ const searchConfig = computed(() => [
   {
     prop: "expressCompany",
     label: "快递公司",
-    type: "select" as const,
-    options: expressCompanyOptions.value,
+    render: (searchForm: any) => (
+      <ExpressCompanySelect v-model={searchForm.expressCompany} />
+    ),
   },
   {
     prop: "senderName",
@@ -173,7 +160,7 @@ const searchConfig = computed(() => [
     type: "input" as const,
     placeholder: "请输入收货人",
   },
-]);
+];
 
 // 状态映射
 const statusMap: Record<string, { label: string; type: string }> = {
@@ -189,17 +176,6 @@ const cargoTypeMap: Record<string, string> = {
   fragile: "易碎品",
   cold: "冷链货物",
   dangerous: "危险品",
-};
-
-// 快递公司映射
-const expressCompanyMap: Record<string, string> = {
-  sf: "顺丰速运",
-  zto: "中通快递",
-  yto: "圆通速递",
-  yd: "韵达快递",
-  sto: "申通快递",
-  jd: "京东物流",
-  deppon: "德邦快递",
 };
 
 // 表格列配置
@@ -231,7 +207,9 @@ const columns = [
     label: "快递公司",
     width: 90,
     formatter: (row: any) =>
-      expressCompanyMap[row.expressCompany] || row.expressCompany || "-",
+      expressCompanyStore.companyMap[row.expressCompany] ||
+      row.expressCompany ||
+      "-",
   },
   {
     prop: "trackingNo",
@@ -503,8 +481,12 @@ const loadData = async (params: any) => {
   }
 };
 
-// 组件挂载时加载快递公司列表
+// 初始化快递公司数据
+const initExpressCompanies = async () => {
+  // 数据由 ExpressCompanySelect 组件自动加载
+};
+
 onMounted(() => {
-  loadExpressCompanies();
+  initExpressCompanies();
 });
 </script>

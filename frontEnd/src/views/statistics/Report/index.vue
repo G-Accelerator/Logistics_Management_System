@@ -179,12 +179,16 @@ import {
   type DistributionData,
   type StatusDistribution,
 } from "../../../api/statistics";
+import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 // 时间范围
 const timeRange = ref(7);
 
 // 城市类型
 const cityType = ref<"origin" | "destination">("origin");
+
+// 快递公司 store
+const expressCompanyStore = useExpressCompanyStore();
 
 // 加载状态
 const loading = reactive({
@@ -293,7 +297,13 @@ async function fetchExpressCompanies() {
   loading.express = true;
   try {
     const data = await getExpressCompanies();
-    expressCompaniesData.value = data;
+    // 将快递公司代码映射为名称
+    expressCompaniesData.value = {
+      labels: data.labels.map(
+        (code) => expressCompanyStore.companyMap[code] || code,
+      ),
+      values: data.values,
+    };
   } catch (error) {
     ElMessage.error("获取快递公司统计失败");
   } finally {
@@ -312,7 +322,13 @@ function handleStatusClick(data: { name: string; value: number }) {
 }
 
 // 初始化加载所有数据
-onMounted(() => {
+onMounted(async () => {
+  // 如果快递公司数据还没加载，先加载
+  if (expressCompanyStore.companies.length === 0) {
+    await expressCompanyStore.load();
+  }
+
+  // 加载统计数据
   fetchOverview();
   fetchTrend();
   fetchStatusDistribution();

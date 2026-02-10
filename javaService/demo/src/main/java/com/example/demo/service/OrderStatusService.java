@@ -43,10 +43,13 @@ public class OrderStatusService {
 
     private final OrderService orderService;
     private final OperationLogRepository operationLogRepository;
+    private final ExpressCompanyService expressCompanyService;
 
-    public OrderStatusService(OrderService orderService, OperationLogRepository operationLogRepository) {
+    public OrderStatusService(OrderService orderService, OperationLogRepository operationLogRepository,
+                             ExpressCompanyService expressCompanyService) {
         this.orderService = orderService;
         this.operationLogRepository = operationLogRepository;
+        this.expressCompanyService = expressCompanyService;
     }
 
 
@@ -112,27 +115,16 @@ public class OrderStatusService {
      * 格式：快递公司前缀 + 日期 + 随机数
      */
     private String generateTrackingNo(String expressCompany) {
-        String prefix = getExpressPrefix(expressCompany);
+        String prefix = "YD";
+        if (expressCompany != null) {
+            com.example.demo.entity.ExpressCompany company = expressCompanyService.getByCode(expressCompany);
+            if (company != null) {
+                prefix = company.getTrackingPrefix();
+            }
+        }
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         String random = String.format("%04d", new Random().nextInt(10000));
         return prefix + date + random;
-    }
-
-    /**
-     * 获取快递公司前缀
-     */
-    private String getExpressPrefix(String expressCompany) {
-        if (expressCompany == null) return "YD";
-        return switch (expressCompany) {
-            case "sf" -> "SF";
-            case "zto" -> "ZTO";
-            case "yto" -> "YTO";
-            case "yd" -> "YD";
-            case "sto" -> "STO";
-            case "jd" -> "JD";
-            case "deppon" -> "DP";
-            default -> "YD";
-        };
     }
 
     /**

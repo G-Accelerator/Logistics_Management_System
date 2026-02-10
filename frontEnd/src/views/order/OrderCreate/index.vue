@@ -40,18 +40,7 @@
             </el-col>
             <el-col :xs="24" :sm="12" :md="4">
               <el-form-item label="快递公司" prop="expressCompany">
-                <el-select
-                  v-model="orderForm.expressCompany"
-                  placeholder="请选择"
-                  style="width: 100%"
-                >
-                  <el-option
-                    v-for="item in expressCompanies"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </el-select>
+                <ExpressCompanySelect v-model="orderForm.expressCompany" />
               </el-form-item>
             </el-col>
             <el-col :xs="8" :sm="4" :md="3">
@@ -233,7 +222,9 @@ import {
 } from "element-plus";
 import { Location, Position, Aim, Box, Check } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
+import ExpressCompanySelect from "../../../components/business/ExpressCompanySelect/index.vue";
 import { createOrder } from "../../../api/order";
+import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 const formRef = ref<FormInstance>();
 const router = useRouter();
@@ -252,7 +243,7 @@ const orderForm = reactive({
   cargoVolume: 10 as number | null,
   cargoQuantity: 20 as number | null,
   remark: "轻拿轻放",
-  expressCompany: "sf",
+  expressCompany: "",
   originLng: null as number | null,
   originLat: null as number | null,
   destLng: null as number | null,
@@ -264,16 +255,6 @@ const cargoTypes = [
   { label: "易碎品", value: "fragile" },
   { label: "冷链货物", value: "cold" },
   { label: "危险品", value: "dangerous" },
-];
-
-const expressCompanies = [
-  { label: "顺丰速运", value: "sf" },
-  { label: "中通快递", value: "zto" },
-  { label: "圆通速递", value: "yto" },
-  { label: "韵达快递", value: "yd" },
-  { label: "申通快递", value: "sto" },
-  { label: "京东物流", value: "jd" },
-  { label: "德邦快递", value: "deppon" },
 ];
 
 const rules: FormRules = {
@@ -425,11 +406,23 @@ const resetForm = () => {
   formRef.value?.resetFields();
 };
 
-onMounted(() => {
+onMounted(async () => {
+  // 初始化地图插件
   (AMap as any).plugin(
     ["AMap.Geocoder", "AMap.AutoComplete", "AMap.Geolocation"],
     () => {},
   );
+
+  // 初始化快递公司，选中第一个
+  const store = useExpressCompanyStore();
+  // 如果数据还没加载，等待加载完成
+  if (store.companies.length === 0) {
+    await store.load();
+  }
+  const companies = store.companies as any;
+  if (companies && companies.length > 0) {
+    orderForm.expressCompany = companies[0].code;
+  }
 });
 </script>
 

@@ -185,7 +185,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, computed } from "vue";
+import { h, ref, computed, onMounted } from "vue";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
 import { Van, Check, DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
@@ -208,8 +208,10 @@ import type {
   StationInfo,
   Order,
 } from "../../../api/order/types";
+import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
+const expressCompanyStore = useExpressCompanyStore();
 const selectedOrders = ref<any[]>([]);
 const logDialogVisible = ref(false);
 const logLoading = ref(false);
@@ -271,17 +273,6 @@ const searchConfig = [
     placeholder: "请输入收货人",
   },
 ];
-
-// 快递公司映射
-const expressCompanyMap: Record<string, string> = {
-  sf: "顺丰速运",
-  zto: "中通快递",
-  yto: "圆通速递",
-  yd: "韵达快递",
-  sto: "申通快递",
-  jd: "京东物流",
-  deppon: "德邦快递",
-};
 
 // 状态标签类型映射
 const statusTagType: Record<
@@ -365,7 +356,9 @@ const columns = [
     label: "快递公司",
     width: 100,
     formatter: (row: any) =>
-      expressCompanyMap[row.expressCompany] || row.expressCompany || "-",
+      expressCompanyStore.companyMap[row.expressCompany] ||
+      row.expressCompany ||
+      "-",
   },
   { prop: "senderName", label: "发货人", width: 80 },
   { prop: "senderPhone", label: "发货人电话", width: 120 },
@@ -719,4 +712,9 @@ const loadData = async (params: any) => {
     return { data: [], total: 0 };
   }
 };
+
+// 初始化快递公司数据
+onMounted(() => {
+  // 数据由 ExpressCompanySelect 组件自动加载
+});
 </script>

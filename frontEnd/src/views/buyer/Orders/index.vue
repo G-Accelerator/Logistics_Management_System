@@ -27,33 +27,18 @@
 </template>
 
 <script setup lang="tsx">
-import { h, ref, computed, onMounted } from "vue";
+import { h, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
 import { DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
 import { getBuyerOrders, receiveOrder } from "../../../api/order";
-import { getEnabledExpressCompanies } from "../../../api/system/expressCompany";
+import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 const router = useRouter();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
-
-// 快递公司选项
-const expressCompanyOptions = ref<{ label: string; value: string }[]>([]);
-
-// 加载快递公司列表
-const loadExpressCompanies = async () => {
-  try {
-    const companies = await getEnabledExpressCompanies();
-    expressCompanyOptions.value = companies.map((c) => ({
-      label: c.name,
-      value: c.code,
-    }));
-  } catch (error) {
-    console.error("获取快递公司列表失败", error);
-  }
-};
+const expressCompanyStore = useExpressCompanyStore();
 
 // 状态选项
 const statusOptions = [
@@ -64,8 +49,8 @@ const statusOptions = [
   { label: "已取消", value: "cancelled" },
 ];
 
-// 搜索配置（使用计算属性以支持动态快递公司选项）
-const searchConfig = computed(() => [
+// 搜索配置
+const searchConfig = [
   {
     prop: "orderNo",
     label: "订单号",
@@ -85,18 +70,7 @@ const searchConfig = computed(() => [
     type: "input" as const,
     placeholder: "请输入货物名称",
   },
-]);
-
-// 快递公司映射
-const expressCompanyMap: Record<string, string> = {
-  sf: "顺丰速运",
-  zto: "中通快递",
-  yto: "圆通速递",
-  yd: "韵达快递",
-  sto: "申通快递",
-  jd: "京东物流",
-  deppon: "德邦快递",
-};
+];
 
 // 状态标签类型映射
 const statusTagType: Record<
@@ -156,7 +130,9 @@ const columns = [
     label: "快递公司",
     width: 100,
     formatter: (row: any) =>
-      expressCompanyMap[row.expressCompany] || row.expressCompany || "-",
+      expressCompanyStore.companyMap[row.expressCompany] ||
+      row.expressCompany ||
+      "-",
   },
   {
     prop: "trackingNo",
@@ -252,8 +228,8 @@ const loadData = async (params: any) => {
   }
 };
 
-// 组件挂载时加载快递公司列表
+// 初始化快递公司数据
 onMounted(() => {
-  loadExpressCompanies();
+  // 数据由 ExpressCompanySelect 组件自动加载
 });
 </script>

@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref } from "vue";
+import { h, ref, onMounted } from "vue";
 import { ElButton, ElTag, ElMessage } from "element-plus";
 import { DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
@@ -29,8 +29,10 @@ import DataTable from "../../../components/business/DataTable/index.vue";
 import ShipDrawer from "../../../components/business/ShipDrawer/index.vue";
 import { getSellerOrders } from "../../../api/order";
 import type { Order } from "../../../api/order/types";
+import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
+const expressCompanyStore = useExpressCompanyStore();
 
 // 发货弹窗状态
 const shipDialogVisible = ref(false);
@@ -57,17 +59,6 @@ const searchConfig = [
     placeholder: "请输入货物名称",
   },
 ];
-
-// 快递公司映射
-const expressCompanyMap: Record<string, string> = {
-  sf: "顺丰速运",
-  zto: "中通快递",
-  yto: "圆通速递",
-  yd: "韵达快递",
-  sto: "申通快递",
-  jd: "京东物流",
-  deppon: "德邦快递",
-};
 
 // 复制订单号
 const copyOrderNo = async (orderNo: string) => {
@@ -133,7 +124,9 @@ const columns = [
     label: "快递公司",
     width: 100,
     formatter: (row: any) =>
-      expressCompanyMap[row.expressCompany] || row.expressCompany || "-",
+      expressCompanyStore.companyMap[row.expressCompany] ||
+      row.expressCompany ||
+      "-",
   },
   { prop: "receiverName", label: "收货人", width: 100 },
   { prop: "receiverPhone", label: "收货人电话", width: 130 },
@@ -190,4 +183,9 @@ const loadData = async (params: any) => {
     return { data: [], total: 0 };
   }
 };
+
+// 初始化快递公司数据
+onMounted(() => {
+  // 数据由 ExpressCompanySelect 组件自动加载
+});
 </script>

@@ -147,9 +147,9 @@ import { ElMessage } from "element-plus";
 import { ZoomIn, ZoomOut, Aim, DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import { getOrder, getTrackPoints, getStationStatus } from "../../../api/order";
-import { getEnabledExpressCompanies } from "../../../api/system/expressCompany";
 import type { TrackInfo, TrackPoint } from "./types";
 import type { StationInfo } from "../../../api/order/types";
+import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 // 组件名称，用于 keep-alive 缓存
 defineOptions({ name: "TransportTrack" });
@@ -158,21 +158,8 @@ export type { TrackInfo, TrackPoint } from "./types";
 
 const route = useRoute();
 
-// 快递公司映射（动态生成）
-let expressCompanyMap: Record<string, string> = {};
-
-// 初始化快递公司映射
-const initExpressCompanyMap = async () => {
-  try {
-    const companies = await getEnabledExpressCompanies();
-    expressCompanyMap = {};
-    companies.forEach((c) => {
-      expressCompanyMap[c.code] = c.name;
-    });
-  } catch (error) {
-    console.error("获取快递公司列表失败", error);
-  }
-};
+// 快递公司 store
+const expressCompanyStore = useExpressCompanyStore();
 
 // 状态
 const loading = ref(false);
@@ -270,9 +257,6 @@ const initMap = () => {
     console.error("请在 index.html 中配置高德地图 API Key");
     return;
   }
-
-  // 初始化快递公司映射
-  initExpressCompanyMap();
 
   map = new AMap.Map("amap-container", {
     zoom: 5,
@@ -514,7 +498,8 @@ const handleSearch = async () => {
     trackInfo.value = {
       trackingNo: order.orderNo || queryValue,
       expressCompanyName:
-        expressCompanyMap[order.expressCompany || ""] || order.expressCompany,
+        expressCompanyStore.companyMap[order.expressCompany || ""] ||
+        order.expressCompany,
       origin: order.origin,
       destination: order.destination,
       status: orderStatus,
@@ -524,7 +509,7 @@ const handleSearch = async () => {
     };
 
     // 获取站点实际状态（使用订单号）
-    const orderNo = order.orderNo;
+    const orderNo = order.orderNo || queryValue;
     let stationStatusList: StationInfo[] = [];
     try {
       stationStatusList = await getStationStatus(orderNo);
@@ -688,6 +673,12 @@ const handleFitView = () => map?.setFitView();
 
 // 生命周期
 onMounted(() => {
+  // 初始化地图插件
+  (AMap as any).plugin(
+    ["AMap.Geocoder", "AMap.AutoComplete", "AMap.Geolocation"],
+    () => {},
+  );
+
   setTimeout(() => {
     initMap();
   }, 100);
