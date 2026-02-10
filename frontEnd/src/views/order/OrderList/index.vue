@@ -46,7 +46,7 @@ import ShipDrawer from "../../../components/business/ShipDrawer/index.vue";
 import ExpressCompanySelect from "../../../components/business/ExpressCompanySelect/index.vue";
 import {
   getOrders,
-  deleteOrder,
+  cancelOrder,
   batchDeleteOrders,
   exportOrders,
 } from "../../../api/order";
@@ -212,6 +212,23 @@ const columns = [
       "-",
   },
   {
+    prop: "status",
+    label: "状态",
+    width: 90,
+    align: "center" as const,
+    render: (row: any) => {
+      const status = statusMap[row.status] || {
+        label: row.status,
+        type: "info",
+      };
+      return h(
+        ElTag,
+        { type: status.type as any, size: "small" },
+        () => status.label,
+      );
+    },
+  },
+  {
     prop: "trackingNo",
     label: "运单号",
     width: 180,
@@ -278,23 +295,7 @@ const columns = [
   { prop: "senderPhone", label: "发货人电话", width: 120 },
   { prop: "receiverName", label: "收货人", width: 80 },
   { prop: "receiverPhone", label: "收货人电话", width: 120 },
-  {
-    prop: "status",
-    label: "状态",
-    width: 90,
-    align: "center" as const,
-    render: (row: any) => {
-      const status = statusMap[row.status] || {
-        label: row.status,
-        type: "info",
-      };
-      return h(
-        ElTag,
-        { type: status.type as any, size: "small" },
-        () => status.label,
-      );
-    },
-  },
+
   { prop: "remark", label: "备注", minWidth: 100, showOverflowTooltip: true },
   { prop: "createTime", label: "创建时间", width: 160 },
 ];
@@ -314,17 +315,19 @@ const operations = [
   },
   { label: "查看物流", type: "primary" as const, handler: viewTrack },
   {
-    label: "删除",
+    label: "取消",
     type: "danger" as const,
+    show: (row: any) =>
+      row.status !== "cancelled" && row.status !== "completed",
     handler: async (row: any) => {
       try {
         await ElMessageBox.confirm(
-          `确定要删除订单 ${row.orderNo} 吗？`,
+          `确定要取消订单 ${row.orderNo} 吗？`,
           "提示",
           { type: "warning" },
         );
-        await deleteOrder(row.orderNo);
-        ElMessage.success("删除成功");
+        await cancelOrder(row.orderNo);
+        ElMessage.success("取消成功");
         tableRef.value?.refresh();
       } catch {}
     },
