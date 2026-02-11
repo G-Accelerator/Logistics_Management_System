@@ -6,7 +6,6 @@
       :columns="columns"
       :load-data="loadData"
       :show-toolbar="true"
-      :show-selection="true"
       :toolbar-left="renderToolbarLeft"
       :operation-width="280"
       @selection-change="handleSelectionChange"

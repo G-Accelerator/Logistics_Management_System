@@ -1,5 +1,5 @@
 <template>
-  <page-container title="订单列表" description="查看我的所有订单">
+  <page-container title="运输列表" description="查看订单完成情况">
     <data-table
       ref="tableRef"
       :search-config="searchConfig"
@@ -12,7 +12,7 @@
   </page-container>
 </template>
 
-<script setup lang="ts">
+<script setup lang="tsx">
 import { h, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage } from "element-plus";
@@ -27,7 +27,7 @@ const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
 const expressCompanyStore = useExpressCompanyStore();
 
 // 复制订单号
-const copyOrderNo = async (orderNo: string) => {
+const copy = async (orderNo: string) => {
   try {
     await navigator.clipboard.writeText(orderNo);
     ElMessage.success("已复制");
@@ -90,7 +90,7 @@ const columns = [
           link: true,
           onClick: (e: Event) => {
             e.stopPropagation();
-            copyOrderNo(row.orderNo);
+            copy(row.orderNo);
           },
         }),
       ]),
@@ -99,11 +99,38 @@ const columns = [
   {
     prop: "expressCompany",
     label: "快递公司",
-    width: 100,
+    width: 90,
     formatter: (row: any) =>
       expressCompanyStore.companyMap[row.expressCompany] ||
       row.expressCompany ||
       "-",
+  },
+  {
+    prop: "trackingNo",
+    label: "运单号",
+    width: 180,
+    showOverflowTooltip: true,
+    render: (row: any) => {
+      if (!row.trackingNo) {
+        return <span style="color: #999;">-</span>;
+      }
+      return (
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span style="overflow: hidden; text-overflow: ellipsis;">
+            {row.trackingNo}
+          </span>
+          <ElButton
+            size="small"
+            icon={DocumentCopy}
+            link
+            onClick={(e: Event) => {
+              e.stopPropagation();
+              copy(row.trackingNo);
+            }}
+          />
+        </div>
+      );
+    },
   },
   { prop: "receiverName", label: "收货人", width: 100 },
   { prop: "receiverPhone", label: "收货人电话", width: 130 },

@@ -42,24 +42,13 @@ public class OrderService {
     // 手机号正则：11位数字
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\d{11}$");
     
-    // 有效的货物类型枚举（中文名称）
+    // 有效的货物类型枚举（代码形式）
     private static final Set<String> VALID_CARGO_TYPES = Set.of(
-        "普通", "易碎", "贵重", "生鲜", "文件"
-    );
-    
-    // 有效的货物类型内部代码
-    private static final Set<String> VALID_CARGO_TYPE_CODES = Set.of(
         "normal", "fragile", "dangerous", "cold", "document"
     );
     
-    // 有效的快递公司枚举（中文名称）
+    // 有效的快递公司枚举（代码形式）
     private static final Set<String> VALID_EXPRESS_COMPANIES = Set.of(
-        "顺丰速运", "中通快递", "圆通速递", "韵达快递", "申通快递",
-        "京东物流", "邮政EMS", "德邦快递", "极兔速递", "百世快递"
-    );
-    
-    // 有效的快递公司内部代码
-    private static final Set<String> VALID_EXPRESS_COMPANY_CODES = Set.of(
         "sf", "zto", "yto", "yd", "sto", "jd", "ems", "deppon", "jitu", "best"
     );
 
@@ -119,22 +108,17 @@ public class OrderService {
                                        String status, String cargoType, String cargoName,
                                        String expressCompany, String senderName, String receiverName,
                                        String receiverPhone) {
-        // 转换货物类型代码为中文名称
-        String cargoTypeDisplay = convertCargoType(cargoType);
-        // 转换快递公司代码为中文名称
-        String expressCompanyDisplay = convertExpressCompany(expressCompany);
-        
         List<Order> filtered = orders.stream()
             .filter(o -> orderNo == null || orderNo.isEmpty() || o.getOrderNo().contains(orderNo))
             .filter(o -> trackingNo == null || trackingNo.isEmpty() || 
                 (o.getTrackingNo() != null && o.getTrackingNo().contains(trackingNo)))
             .filter(o -> status == null || status.isEmpty() || o.getStatus().equals(status))
-            .filter(o -> cargoTypeDisplay == null || cargoTypeDisplay.isEmpty() || 
-                (o.getCargoType() != null && o.getCargoType().equals(cargoTypeDisplay)))
+            .filter(o -> cargoType == null || cargoType.isEmpty() || 
+                (o.getCargoType() != null && o.getCargoType().equals(cargoType)))
             .filter(o -> cargoName == null || cargoName.isEmpty() || 
                 (o.getCargoName() != null && o.getCargoName().contains(cargoName)))
-            .filter(o -> expressCompanyDisplay == null || expressCompanyDisplay.isEmpty() || 
-                (o.getExpressCompany() != null && o.getExpressCompany().equals(expressCompanyDisplay)))
+            .filter(o -> expressCompany == null || expressCompany.isEmpty() || 
+                (o.getExpressCompany() != null && o.getExpressCompany().equals(expressCompany)))
             .filter(o -> senderName == null || senderName.isEmpty() || 
                 (o.getSenderName() != null && o.getSenderName().contains(senderName)))
             .filter(o -> receiverName == null || receiverName.isEmpty() || 
@@ -158,10 +142,10 @@ public class OrderService {
             return null;
         }
         return switch (cargoTypeCode) {
-            case "normal" -> "普通";
-            case "fragile" -> "易碎";
-            case "cold" -> "生鲜";
-            case "dangerous" -> "贵重";
+            case "normal" -> "普通货物";
+            case "fragile" -> "易碎品";
+            case "cold" -> "冷链货物";
+            case "dangerous" -> "危险品";
             case "document" -> "文件";
             default -> cargoTypeCode;
         };
@@ -497,18 +481,14 @@ public class OrderService {
             errors.add(new ImportError(rowNum, "收货人电话", order.getReceiverPhone(), "收货人电话格式错误，应为11位数字"));
         }
         
-        // 3. 验证货物类型枚举值（同时支持中文名称和内部代码）
-        if (!isBlank(order.getCargoType()) && 
-            !VALID_CARGO_TYPES.contains(order.getCargoType()) && 
-            !VALID_CARGO_TYPE_CODES.contains(order.getCargoType())) {
+        // 3. 验证货物类型枚举值
+        if (!isBlank(order.getCargoType()) && !VALID_CARGO_TYPES.contains(order.getCargoType())) {
             errors.add(new ImportError(rowNum, "货物类型", order.getCargoType(), 
                 "货物类型无效，有效值：" + String.join("、", VALID_CARGO_TYPES)));
         }
         
-        // 4. 验证快递公司枚举值（同时支持中文名称和内部代码）
-        if (!isBlank(order.getExpressCompany()) && 
-            !VALID_EXPRESS_COMPANIES.contains(order.getExpressCompany()) &&
-            !VALID_EXPRESS_COMPANY_CODES.contains(order.getExpressCompany())) {
+        // 4. 验证快递公司枚举值
+        if (!isBlank(order.getExpressCompany()) && !VALID_EXPRESS_COMPANIES.contains(order.getExpressCompany())) {
             errors.add(new ImportError(rowNum, "快递公司", order.getExpressCompany(), 
                 "快递公司无效，有效值：" + String.join("、", VALID_EXPRESS_COMPANIES)));
         }

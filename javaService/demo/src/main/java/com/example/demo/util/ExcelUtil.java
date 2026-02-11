@@ -66,7 +66,7 @@ public class ExcelUtil {
             // 添加示例数据行（可选）
             Row exampleRow = sheet.createRow(1);
             exampleRow.createCell(0).setCellValue("示例货物");
-            exampleRow.createCell(1).setCellValue("普通");
+            exampleRow.createCell(1).setCellValue("普通货物");
             exampleRow.createCell(2).setCellValue(10.5);
             exampleRow.createCell(3).setCellValue(0.5);
             exampleRow.createCell(4).setCellValue(1);
@@ -180,10 +180,10 @@ public class ExcelUtil {
 
     // 货物类型映射：内部代码 -> 中文名称
     private static final java.util.Map<String, String> CARGO_TYPE_MAP = java.util.Map.of(
-        "normal", "普通",
-        "fragile", "易碎",
-        "cold", "生鲜",
-        "dangerous", "贵重",
+        "normal", "普通货物",
+        "fragile", "易碎品",
+        "cold", "冷链货物",
+        "dangerous", "危险品",
         "document", "文件"
     );
     
