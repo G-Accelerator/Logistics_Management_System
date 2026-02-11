@@ -23,8 +23,6 @@
           v-if="row.status === 'shipping'"
           type="success"
           link
-          :disabled="!isLastStationArrived(row)"
-          :title="isLastStationArrived(row) ? '' : '货物尚未到达目的地'"
           @click="handleReceive(row)"
         >
           签收
@@ -38,7 +36,7 @@
           站点管理
         </el-button>
         <el-button
-          v-if="row.status !== 'cancelled'"
+          v-if="row.status === 'pending' || row.status === 'shipping'"
           type="danger"
           link
           @click="handleCancel(row)"
@@ -295,7 +293,7 @@ const statusTextMap: Record<string, string> = {
 // 操作类型标签映射
 const actionTagType: Record<
   string,
-  "primary" | "success" | "danger" | "warning"
+  "primary" | "success" | "danger" | "warning" | "info"
 > = {
   ship: "primary",
   receive: "success",
@@ -400,6 +398,19 @@ const handleShipSuccess = () => {
 // 单个签收
 const handleReceive = async (row: any) => {
   try {
+    // 检查最后一个站点是否已到达
+    const stations = await getStationStatus(row.orderNo);
+    if (stations.length === 0) {
+      ElMessage.warning("无法获取站点信息");
+      return;
+    }
+
+    const lastStation = stations[stations.length - 1];
+    if (lastStation?.status !== "arrived") {
+      ElMessage.warning("货物尚未到达目的地，无法签收");
+      return;
+    }
+
     await ElMessageBox.confirm(
       `确定要签收订单 ${row.orderNo} 吗？`,
       "确认签收",
@@ -466,14 +477,6 @@ const canMarkStation = (index: number): boolean => {
   if (index === 0) return true;
   const prevStation = stationList.value.find((s) => s.index === index - 1);
   return prevStation?.status === "arrived";
-};
-
-// 判断订单最后一个站点是否已到达
-const isLastStationArrived = (row: any): boolean => {
-  const trackPoints = row.trackPoints;
-  if (!trackPoints || trackPoints.length === 0) return false;
-  const lastPoint = trackPoints[trackPoints.length - 1];
-  return lastPoint?.arrivalStatus === "arrived";
 };
 
 // 打开站点管理弹窗
@@ -701,6 +704,7 @@ const loadData = async (params: any) => {
       senderName: params.senderName,
       receiverName: params.receiverName,
     });
+
     return { data: result.data, total: result.total };
   } catch (error) {
     ElMessage.error("获取订单列表失败");

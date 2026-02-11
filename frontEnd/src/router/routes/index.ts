@@ -135,14 +135,14 @@ export const asyncRoutes: AppRouteRecordRaw[] = [
     path: "/settings",
     component: () => import("../../layouts/MainLayout.vue"),
     redirect: "/settings/system",
-    meta: { title: "系统设置", icon: "Setting", roles: ["admin"] },
+    meta: { title: "系统设置", icon: "Tools", roles: ["admin"] },
     children: [
       {
         path: "/settings/system",
         name: "SystemSettings",
         component: () =>
           import("../../views/settings/SystemSettings/index.vue"),
-        meta: { title: "系统配置", icon: "Tools" },
+        meta: { title: "系统配置", icon: "Setting" },
       },
       {
         path: "/settings/user",
