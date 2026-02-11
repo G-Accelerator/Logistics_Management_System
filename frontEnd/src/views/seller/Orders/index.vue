@@ -20,11 +20,9 @@ import { DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
 import { getSellerOrders } from "../../../api/order";
-import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 const router = useRouter();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
-const expressCompanyStore = useExpressCompanyStore();
 
 // 复制订单号
 const copy = async (orderNo: string) => {
@@ -101,9 +99,7 @@ const columns = [
     label: "快递公司",
     width: 90,
     formatter: (row: any) =>
-      expressCompanyStore.companyMap[row.expressCompany] ||
-      row.expressCompany ||
-      "-",
+      row.expressCompanyName || row.expressCompany || "-",
   },
   {
     prop: "trackingNo",

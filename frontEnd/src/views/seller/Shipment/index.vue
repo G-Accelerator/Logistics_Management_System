@@ -29,10 +29,8 @@ import DataTable from "../../../components/business/DataTable/index.vue";
 import ShipDrawer from "../../../components/business/ShipDrawer/index.vue";
 import { getSellerOrders } from "../../../api/order";
 import type { Order } from "../../../api/order/types";
-import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
-const expressCompanyStore = useExpressCompanyStore();
 
 // 发货弹窗状态
 const shipDialogVisible = ref(false);
@@ -124,9 +122,7 @@ const columns = [
     label: "快递公司",
     width: 100,
     formatter: (row: any) =>
-      expressCompanyStore.companyMap[row.expressCompany] ||
-      row.expressCompany ||
-      "-",
+      row.expressCompanyName || row.expressCompany || "-",
   },
   { prop: "receiverName", label: "收货人", width: 100 },
   { prop: "receiverPhone", label: "收货人电话", width: 130 },

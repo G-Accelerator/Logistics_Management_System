@@ -207,10 +207,8 @@ import type {
   StationInfo,
   Order,
 } from "../../../api/order/types";
-import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
-const expressCompanyStore = useExpressCompanyStore();
 const selectedOrders = ref<any[]>([]);
 const logDialogVisible = ref(false);
 const logLoading = ref(false);
@@ -355,9 +353,7 @@ const columns = [
     label: "快递公司",
     width: 100,
     formatter: (row: any) =>
-      expressCompanyStore.companyMap[row.expressCompany] ||
-      row.expressCompany ||
-      "-",
+      row.expressCompanyName || row.expressCompany || "-",
   },
   { prop: "senderName", label: "发货人", width: 80 },
   { prop: "senderPhone", label: "发货人电话", width: 120 },

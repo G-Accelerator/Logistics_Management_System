@@ -149,7 +149,6 @@ import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import { getOrder, getTrackPoints, getStationStatus } from "../../../api/order";
 import type { TrackInfo, TrackPoint } from "./types";
 import type { StationInfo } from "../../../api/order/types";
-import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 // 组件名称，用于 keep-alive 缓存
 defineOptions({ name: "TransportTrack" });
@@ -157,9 +156,6 @@ defineOptions({ name: "TransportTrack" });
 export type { TrackInfo, TrackPoint } from "./types";
 
 const route = useRoute();
-
-// 快递公司 store
-const expressCompanyStore = useExpressCompanyStore();
 
 // 状态
 const loading = ref(false);
@@ -497,9 +493,7 @@ const handleSearch = async () => {
 
     trackInfo.value = {
       trackingNo: order.orderNo || queryValue,
-      expressCompanyName:
-        expressCompanyStore.companyMap[order.expressCompany || ""] ||
-        order.expressCompany,
+      expressCompanyName: order.expressCompanyName || order.expressCompany,
       origin: order.origin,
       destination: order.destination,
       status: orderStatus,

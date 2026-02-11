@@ -61,7 +61,7 @@ public class StationStatusService {
             throw new IllegalArgumentException("订单不存在");
         }
 
-        List<TrackPoint> trackPoints = order.getTrackPoints();
+        List<TrackPoint> trackPoints = orderService.parseTrackPoints(order.getTrackPointsJson());
         if (trackPoints == null || trackPoints.isEmpty()) {
             throw new IllegalArgumentException("该订单无站点数据");
         }
@@ -95,7 +95,7 @@ public class StationStatusService {
             throw new IllegalArgumentException("订单不存在");
         }
 
-        List<TrackPoint> trackPoints = order.getTrackPoints();
+        List<TrackPoint> trackPoints = orderService.parseTrackPoints(order.getTrackPointsJson());
         if (trackPoints == null || trackPoints.isEmpty()) {
             throw new IllegalArgumentException("该订单无站点数据");
         }
@@ -112,7 +112,7 @@ public class StationStatusService {
         }
 
         // 顺序验证
-        if (!canMarkStation(order, stationIndex)) {
+        if (!canMarkStation(trackPoints, stationIndex)) {
             throw new IllegalArgumentException("请先标记前一个站点到达");
         }
 
@@ -122,6 +122,7 @@ public class StationStatusService {
         trackPoint.setArrivalTime(arrivalTime);
 
         // 持久化
+        order.setTrackPointsJson(orderService.serializeTrackPoints(trackPoints));
         orderService.updateOrder(order);
         
         // 记录操作日志
@@ -150,7 +151,7 @@ public class StationStatusService {
             throw new IllegalArgumentException("订单不存在");
         }
 
-        List<TrackPoint> trackPoints = order.getTrackPoints();
+        List<TrackPoint> trackPoints = orderService.parseTrackPoints(order.getTrackPointsJson());
         if (trackPoints == null || trackPoints.isEmpty()) {
             throw new IllegalArgumentException("该订单无站点数据");
         }
@@ -167,6 +168,7 @@ public class StationStatusService {
         }
 
         if (arrivedCount > 0) {
+            order.setTrackPointsJson(orderService.serializeTrackPoints(trackPoints));
             orderService.updateOrder(order);
             // 记录操作日志
             logStationArrival(orderNo, "全部站点", -1);
@@ -189,7 +191,7 @@ public class StationStatusService {
             throw new IllegalArgumentException("订单不存在");
         }
 
-        List<TrackPoint> trackPoints = order.getTrackPoints();
+        List<TrackPoint> trackPoints = orderService.parseTrackPoints(order.getTrackPointsJson());
         if (trackPoints == null || trackPoints.isEmpty()) {
             throw new IllegalArgumentException("该订单无站点数据");
         }
@@ -212,6 +214,7 @@ public class StationStatusService {
         }
 
         if (arrivedCount > 0) {
+            order.setTrackPointsJson(orderService.serializeTrackPoints(trackPoints));
             orderService.updateOrder(order);
             // 记录操作日志
             TrackPoint targetPoint = trackPoints.get(targetIndex);
@@ -225,17 +228,16 @@ public class StationStatusService {
     /**
      * 验证是否可以标记该站点（顺序验证）
      * 只有当前一个站点已到达时，才能标记下一个站点到达
-     * @param order 订单
+     * @param trackPoints 轨迹点列表
      * @param stationIndex 站点索引
      * @return 是否可以标记
      */
-    public boolean canMarkStation(Order order, int stationIndex) {
+    public boolean canMarkStation(List<TrackPoint> trackPoints, int stationIndex) {
         if (stationIndex == 0) {
             // 第一个站点（起点）可以直接标记
             return true;
         }
 
-        List<TrackPoint> trackPoints = order.getTrackPoints();
         if (trackPoints == null || stationIndex >= trackPoints.size()) {
             return false;
         }

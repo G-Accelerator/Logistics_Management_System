@@ -34,11 +34,9 @@ import { DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
 import { getBuyerOrders, receiveOrder } from "../../../api/order";
-import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 const router = useRouter();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
-const expressCompanyStore = useExpressCompanyStore();
 
 // 状态选项
 const statusOptions = [
@@ -130,9 +128,7 @@ const columns = [
     label: "快递公司",
     width: 100,
     formatter: (row: any) =>
-      expressCompanyStore.companyMap[row.expressCompany] ||
-      row.expressCompany ||
-      "-",
+      row.expressCompanyName || row.expressCompany || "-",
   },
   {
     prop: "trackingNo",

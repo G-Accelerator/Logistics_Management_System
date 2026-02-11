@@ -1,21 +1,39 @@
 package com.example.demo.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
  * 操作日志实体类
  * 记录订单状态变更的操作日志
  */
+@Entity
+@Table(name = "operation_logs")
 public class OperationLog {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
+    @Column(length = 50)
     private String orderNo;
+    
+    @Column(length = 20)
     private String action;        // ship, receive, cancel
+    
+    @Column(length = 20)
     private String fromStatus;
+    
+    @Column(length = 20)
     private String toStatus;
+    
+    @Column(length = 50)
     private String operator;      // 操作人（预留，当前为 "system"）
+    
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime operateTime;
+    
+    @Column(length = 500)
     private String remark;
 
     public OperationLog() {}

@@ -9,6 +9,7 @@ export interface Order {
   cargoQuantity?: number;
   remark?: string;
   expressCompany?: string;
+  expressCompanyName?: string; // 快递公司名称（后端动态填充）
   origin: string;
   destination: string;
   senderName: string;

@@ -96,7 +96,7 @@ public class OrderStatusService {
         order.setStatus(STATUS_SHIPPING);
         order.setShipTime(LocalDateTime.now());
         order.setTrackingNo(generateTrackingNo(order.getExpressCompany()));
-        order.setTrackPoints(trackPoints);
+        order.setTrackPointsJson(orderService.serializeTrackPoints(trackPoints));
         order.setDuration(duration);
 
         // 持久化订单变更
@@ -168,7 +168,7 @@ public class OrderStatusService {
      * @return 是否已到达目的地
      */
     private boolean isLastStationArrived(Order order) {
-        List<TrackPoint> trackPoints = order.getTrackPoints();
+        List<TrackPoint> trackPoints = orderService.parseTrackPoints(order.getTrackPointsJson());
         if (trackPoints == null || trackPoints.isEmpty()) {
             // 没有轨迹数据，不允许签收
             return false;
@@ -282,6 +282,6 @@ public class OrderStatusService {
      * @return 操作日志列表
      */
     public List<OperationLog> getOperationLogs(String orderNo) {
-        return operationLogRepository.findByOrderNo(orderNo);
+        return operationLogRepository.findByOrderNoOrderByOperateTimeDesc(orderNo);
     }
 }

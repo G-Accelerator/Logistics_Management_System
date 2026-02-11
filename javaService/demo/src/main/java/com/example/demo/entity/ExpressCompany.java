@@ -1,19 +1,36 @@
 package com.example.demo.entity;
 
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
  * 快递公司实体
  */
+@Entity
+@Table(name = "express_companies")
 public class ExpressCompany {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
+    @Column(unique = true, length = 20)
     private String code;              // sf, zto 等
+    
+    @Column(length = 50)
     private String name;              // 顺丰速运、中通快递等
+    
+    @Column(length = 20)
     private String trackingPrefix;    // SF, ZTO 等（用于生成运单号）
+    
     private Integer sortOrder;        // 排序
     private Boolean enabled;          // 是否启用
+    
+    @Column(length = 20)
     private String phone;             // 客服电话
+    
+    @Column(length = 100)
     private String website;           // 官网
+    
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 

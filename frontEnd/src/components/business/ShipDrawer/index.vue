@@ -112,20 +112,9 @@ const trackPoints = ref<RouteTrackPoint[]>([]);
 const shipping = ref(false);
 const showMapDialog = ref(false);
 
-// 快递公司名称映射
-const expressCompanyMap: Record<string, string> = {
-  sf: "顺丰速运",
-  zto: "中通快递",
-  yto: "圆通速递",
-  yd: "韵达快递",
-  sto: "申通快递",
-  jd: "京东物流",
-  deppon: "德邦快递",
-};
-
+// 快递公司名称（直接使用后端返回的名称）
 const expressCompanyName = computed(() => {
-  const code = props.order?.expressCompany;
-  return code ? expressCompanyMap[code] || code : "-";
+  return props.order?.expressCompanyName || props.order?.expressCompany || "-";
 });
 
 // 订单中的坐标

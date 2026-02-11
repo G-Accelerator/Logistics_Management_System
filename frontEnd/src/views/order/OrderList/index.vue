@@ -56,10 +56,8 @@ import type {
   ExportRequest,
 } from "../../../api/order/types";
 import { downloadOrderExport } from "../../../utils/file";
-import { useExpressCompanyStore } from "../../../store/expressCompany";
 
 const router = useRouter();
-const expressCompanyStore = useExpressCompanyStore();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
 
 // 导入对话框状态
@@ -207,9 +205,7 @@ const columns = [
     label: "快递公司",
     width: 90,
     formatter: (row: any) =>
-      expressCompanyStore.companyMap[row.expressCompany] ||
-      row.expressCompany ||
-      "-",
+      row.expressCompanyName || row.expressCompany || "-",
   },
   {
     prop: "status",

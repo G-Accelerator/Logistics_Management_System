@@ -4,20 +4,12 @@ import com.example.demo.dto.DistributionData;
 import com.example.demo.dto.StatisticsOverview;
 import com.example.demo.dto.TrendData;
 import com.example.demo.entity.Order;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import jakarta.annotation.PostConstruct;
+import com.example.demo.repository.OrderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -29,38 +21,15 @@ import java.util.stream.Collectors;
 public class StatisticsService {
 
     private static final Logger log = LoggerFactory.getLogger(StatisticsService.class);
-    private static final String DATA_FILE = "data/orders.json";
 
-    private final ObjectMapper objectMapper;
-
-    public StatisticsService() {
-        this.objectMapper = new ObjectMapper();
-        this.objectMapper.registerModule(new JavaTimeModule());
-        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-    }
-
-    /**
-     * 加载订单数据
-     */
-    private List<Order> loadOrders() {
-        File file = new File(DATA_FILE);
-        if (file.exists()) {
-            try (InputStreamReader reader = new InputStreamReader(
-                    new FileInputStream(file), StandardCharsets.UTF_8)) {
-                return objectMapper.readValue(reader, new TypeReference<List<Order>>() {});
-            } catch (IOException e) {
-                log.error("加载订单数据失败: {}", e.getMessage());
-            }
-        }
-        return new ArrayList<>();
-    }
-
+    @Autowired
+    private OrderRepository orderRepository;
 
     /**
      * 获取统计概览
      */
     public StatisticsOverview getOverview() {
-        List<Order> orders = loadOrders();
+        List<Order> orders = orderRepository.findAll();
         
         long totalOrders = orders.size();
         long pendingOrders = orders.stream()
@@ -99,7 +68,7 @@ public class StatisticsService {
      * 获取订单趋势
      */
     public TrendData getTrend(int days) {
-        List<Order> orders = loadOrders();
+        List<Order> orders = orderRepository.findAll();
         LocalDate today = LocalDate.now();
         
         List<String> dates = new ArrayList<>();
@@ -125,7 +94,7 @@ public class StatisticsService {
      * 获取状态分布
      */
     public Map<String, Long> getStatusDistribution() {
-        List<Order> orders = loadOrders();
+        List<Order> orders = orderRepository.findAll();
         
         Map<String, Long> distribution = new LinkedHashMap<>();
         distribution.put("pending", orders.stream().filter(o -> "pending".equals(o.getStatus())).count());
@@ -143,7 +112,7 @@ public class StatisticsService {
      * @param limit 返回数量限制
      */
     public DistributionData getTopCities(String type, int limit) {
-        List<Order> orders = loadOrders();
+        List<Order> orders = orderRepository.findAll();
         
         Map<String, Long> cityCount;
         if ("origin".equals(type)) {
@@ -194,7 +163,7 @@ public class StatisticsService {
      * 获取快递公司统计
      */
     public DistributionData getExpressCompanies() {
-        List<Order> orders = loadOrders();
+        List<Order> orders = orderRepository.findAll();
         
         Map<String, Long> companyCount = orders.stream()
             .filter(o -> o.getExpressCompany() != null && !o.getExpressCompany().isEmpty())
@@ -227,7 +196,6 @@ public class StatisticsService {
             return false;
         }
         try {
-            // 格式: "yyyy-MM-dd HH:mm"
             LocalDateTime dateTime = LocalDateTime.parse(createTime, 
                 DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
             return YearMonth.from(dateTime).equals(month);
@@ -254,19 +222,15 @@ public class StatisticsService {
 
     /**
      * 从地址中提取城市名
-     * 例如: "北京市朝阳区xxx" -> "北京市"
      */
     private String extractCity(String address) {
         if (address == null || address.isEmpty()) {
             return "未知";
         }
-        // 简单处理：取前3-4个字符作为城市名
-        // 处理直辖市和普通城市
         if (address.contains("市")) {
             int idx = address.indexOf("市");
             return address.substring(0, Math.min(idx + 1, address.length()));
         }
-        // 如果没有"市"，取前4个字符
         return address.substring(0, Math.min(4, address.length()));
     }
 }

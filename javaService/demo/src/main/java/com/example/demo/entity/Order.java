@@ -1,30 +1,69 @@
 package com.example.demo.entity;
 
-import com.example.demo.dto.RoutePlanResponse.TrackPoint;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.List;
 
+@Entity
+@Table(name = "orders")
 public class Order {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
+    @Column(unique = true, length = 50)
     private String orderNo;
+    
+    @Column(length = 100)
     private String cargoName;
+    
+    @Column(length = 50)
     private String cargoType;
+    
     private Double cargoWeight;    // 重量(kg)
     private Double cargoVolume;    // 体积(m³)
     private Integer cargoQuantity; // 数量(件)
+    
+    @Column(length = 500)
     private String remark;         // 备注
-    private String expressCompany; // 快递公司
+    
+    @Column(length = 50)
+    private String expressCompany; // 快递公司代码
+    
+    @Transient  // 不存数据库，动态填充
+    private String expressCompanyName; // 快递公司名称
+    
+    @Column(length = 255)
     private String origin;
+    
+    @Column(length = 255)
     private String destination;
+    
+    @Column(length = 50)
     private String senderName;
+    
+    @Column(length = 50)
     private String receiverName;
+    
+    @Column(length = 20)
     private String senderPhone;
+    
+    @Column(length = 20)
     private String receiverPhone;
+    
+    @Column(length = 20)
     private String status;
+    
+    @Column(length = 50)
     private String createTime;
+    
+    @Column(length = 50)
     private String trackingNo;  // 运单号（发货时生成）
-    private int duration;  // 预计时长(秒)
-    private List<TrackPoint> trackPoints;
+    
+    private Integer duration;  // 预计时长(秒)
+    
+    @Column(columnDefinition = "TEXT")
+    private String trackPointsJson;  // 轨迹点JSON存储
+    
     private LocalDateTime shipTime;     // 发货时间
     private LocalDateTime receiveTime;  // 签收时间
     private LocalDateTime cancelTime;   // 取消时间
@@ -54,6 +93,8 @@ public class Order {
     public void setRemark(String remark) { this.remark = remark; }
     public String getExpressCompany() { return expressCompany; }
     public void setExpressCompany(String expressCompany) { this.expressCompany = expressCompany; }
+    public String getExpressCompanyName() { return expressCompanyName; }
+    public void setExpressCompanyName(String expressCompanyName) { this.expressCompanyName = expressCompanyName; }
     public String getOrigin() { return origin; }
     public void setOrigin(String origin) { this.origin = origin; }
     public String getDestination() { return destination; }
@@ -72,10 +113,10 @@ public class Order {
     public void setCreateTime(String createTime) { this.createTime = createTime; }
     public String getTrackingNo() { return trackingNo; }
     public void setTrackingNo(String trackingNo) { this.trackingNo = trackingNo; }
-    public int getDuration() { return duration; }
-    public void setDuration(int duration) { this.duration = duration; }
-    public List<TrackPoint> getTrackPoints() { return trackPoints; }
-    public void setTrackPoints(List<TrackPoint> trackPoints) { this.trackPoints = trackPoints; }
+    public Integer getDuration() { return duration; }
+    public void setDuration(Integer duration) { this.duration = duration; }
+    public String getTrackPointsJson() { return trackPointsJson; }
+    public void setTrackPointsJson(String trackPointsJson) { this.trackPointsJson = trackPointsJson; }
     public LocalDateTime getShipTime() { return shipTime; }
     public void setShipTime(LocalDateTime shipTime) { this.shipTime = shipTime; }
     public LocalDateTime getReceiveTime() { return receiveTime; }
