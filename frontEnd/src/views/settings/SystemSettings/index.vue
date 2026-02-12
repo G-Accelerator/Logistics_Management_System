@@ -26,7 +26,12 @@
             </template>
           </div>
 
-          <div v-loading="loading" class="company-list" ref="sortableContainer">
+          <div
+            v-loading="loading"
+            class="company-list"
+            ref="sortableContainer"
+            :key="listKey"
+          >
             <el-card
               v-for="company in companies"
               :key="company.id"
@@ -165,6 +170,7 @@ const dialogVisible = ref(false);
 const isEdit = ref(false);
 const sortMode = ref(false);
 const sortableContainer = ref<HTMLElement>();
+const listKey = ref(0); // 用于强制重新渲染列表
 let sortableInstance: ReturnType<typeof Sortable.create> | null = null;
 
 const store = useExpressCompanyStore();
@@ -219,6 +225,8 @@ const toggleSortMode = async () => {
     }
     // 恢复原始顺序
     companies.value = JSON.parse(JSON.stringify(originalCompanies.value));
+    // 强制重新渲染列表，因为 Sortable.js 直接修改了 DOM 顺序
+    listKey.value++;
   }
 };
 
