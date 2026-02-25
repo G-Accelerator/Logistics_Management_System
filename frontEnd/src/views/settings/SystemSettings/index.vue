@@ -1,12 +1,11 @@
 <template>
-  <page-container title="系统配置" description="管理系统配置项">
-    <el-tabs v-model="activeTab">
-      <!-- 快递公司管理 -->
+  <div class="system-settings">
+    <el-tabs v-model="activeTab" class="settings-tabs">
       <el-tab-pane label="快递公司管理" name="express">
-        <div style="padding: 20px 0">
-          <div style="display: flex; gap: 12px; margin-bottom: 20px">
+        <div class="tab-content">
+          <div class="toolbar">
             <el-button type="primary" @click="handleCreate">
-              新增快递公司
+              <el-icon><Plus /></el-icon>新增快递公司
             </el-button>
             <template v-if="!sortMode">
               <el-button
@@ -15,14 +14,14 @@
                   initSortable();
                 "
               >
-                调整展示顺序
+                <el-icon><Sort /></el-icon>调整展示顺序
               </el-button>
             </template>
             <template v-else>
               <el-button type="success" @click="completeSortOrder">
-                完成排序
+                <el-icon><Check /></el-icon>完成排序
               </el-button>
-              <el-button @click="toggleSortMode"> 取消 </el-button>
+              <el-button @click="toggleSortMode">取消</el-button>
             </template>
           </div>
 
@@ -32,73 +31,75 @@
             ref="sortableContainer"
             :key="listKey"
           >
-            <el-card
+            <div
               v-for="company in companies"
               :key="company.id"
               :data-id="company.id"
               class="company-card"
               :class="{ 'sort-mode': sortMode }"
             >
-              <template #header>
-                <div class="card-header">
-                  <span v-if="sortMode" class="sort-handle">⋮⋮</span>
-                  <span class="company-name">{{ company.name }}</span>
-                  <div class="card-actions">
-                    <el-tag :type="company.enabled ? 'success' : 'info'">
-                      {{ company.enabled ? "启用" : "禁用" }}
-                    </el-tag>
-                    <template v-if="!sortMode">
-                      <el-button
-                        link
-                        type="primary"
-                        @click="handleEdit(company)"
-                      >
-                        编辑
-                      </el-button>
-                      <el-button
-                        link
-                        type="danger"
-                        @click="handleDelete(company)"
-                      >
-                        删除
-                      </el-button>
-                    </template>
-                  </div>
+              <div class="card-header">
+                <span v-if="sortMode" class="sort-handle">
+                  <el-icon><Rank /></el-icon>
+                </span>
+                <div class="company-name">
+                  <span class="name">{{ company.name }}</span>
+                  <span class="code">{{ company.code }}</span>
                 </div>
-              </template>
-
-              <div class="company-info">
+                <div class="card-actions">
+                  <el-tag
+                    :type="company.enabled ? 'success' : 'info'"
+                    size="small"
+                    effect="light"
+                  >
+                    {{ company.enabled ? "启用" : "禁用" }}
+                  </el-tag>
+                  <template v-if="!sortMode">
+                    <el-button
+                      link
+                      type="primary"
+                      size="small"
+                      @click="handleEdit(company)"
+                    >
+                      <el-icon><Edit /></el-icon>编辑
+                    </el-button>
+                    <el-button
+                      link
+                      type="danger"
+                      size="small"
+                      @click="handleDelete(company)"
+                    >
+                      <el-icon><Delete /></el-icon>删除
+                    </el-button>
+                  </template>
+                </div>
+              </div>
+              <div class="card-body">
                 <div class="info-row">
-                  <span class="label">代码：</span>
-                  <span class="value">{{ company.code }}</span>
+                  <el-icon class="info-icon"><Ticket /></el-icon>
+                  <span class="info-label">运单前缀</span>
+                  <span class="info-value">{{ company.trackingPrefix }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="label">运单前缀：</span>
-                  <span class="value">{{ company.trackingPrefix }}</span>
+                  <el-icon class="info-icon"><Phone /></el-icon>
+                  <span class="info-label">客服电话</span>
+                  <span class="info-value">{{ company.phone || "-" }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="label">客服电话：</span>
-                  <span class="value">{{ company.phone || "-" }}</span>
-                </div>
-                <div class="info-row">
-                  <span class="label">官网：</span>
-                  <span class="value">
+                  <el-icon class="info-icon"><Link /></el-icon>
+                  <span class="info-label">官网</span>
+                  <span class="info-value">
                     <a
                       v-if="company.website"
                       :href="company.website"
                       target="_blank"
+                      >{{ company.website }}</a
                     >
-                      {{ company.website }}
-                    </a>
                     <span v-else>-</span>
                   </span>
                 </div>
-                <div v-if="!sortMode" class="info-row">
-                  <span class="label">排序：</span>
-                  <span class="value">{{ company.sortOrder }}</span>
-                </div>
               </div>
-            </el-card>
+            </div>
 
             <el-empty
               v-if="companies.length === 0"
@@ -113,10 +114,11 @@
     <el-dialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑快递公司' : '新增快递公司'"
-      width="500px"
+      width="480px"
       destroy-on-close
+      class="settings-dialog"
     >
-      <el-form :model="form" label-width="100px" @submit.prevent="handleSave">
+      <el-form :model="form" label-width="90px" @submit.prevent="handleSave">
         <el-form-item label="代码" required>
           <el-input
             v-model="form.code"
@@ -145,14 +147,24 @@
         <el-button type="primary" @click="handleSave">保存</el-button>
       </template>
     </el-dialog>
-  </page-container>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import {
+  Plus,
+  Sort,
+  Check,
+  Rank,
+  Edit,
+  Delete,
+  Ticket,
+  Phone,
+  Link,
+} from "@element-plus/icons-vue";
 import Sortable from "sortablejs";
-import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import {
   getExpressCompanies,
   createExpressCompany,
@@ -170,7 +182,7 @@ const dialogVisible = ref(false);
 const isEdit = ref(false);
 const sortMode = ref(false);
 const sortableContainer = ref<HTMLElement>();
-const listKey = ref(0); // 用于强制重新渲染列表
+const listKey = ref(0);
 let sortableInstance: ReturnType<typeof Sortable.create> | null = null;
 
 const store = useExpressCompanyStore();
@@ -192,7 +204,7 @@ const loadCompanies = async () => {
     );
     companies.value = sorted;
     originalCompanies.value = JSON.parse(JSON.stringify(sorted));
-  } catch (error) {
+  } catch {
     ElMessage.error("获取快递公司列表失败");
   } finally {
     loading.value = false;
@@ -201,7 +213,6 @@ const loadCompanies = async () => {
 
 const initSortable = () => {
   if (!sortableContainer.value) return;
-
   sortableInstance = Sortable.create(sortableContainer.value, {
     animation: 150,
     ghostClass: "sortable-ghost",
@@ -212,29 +223,22 @@ const initSortable = () => {
 
 const toggleSortMode = async () => {
   sortMode.value = !sortMode.value;
-
   if (sortMode.value) {
-    // 进入排序模式
     await nextTick();
     initSortable();
   } else {
-    // 退出排序模式（取消）
     if (sortableInstance) {
       sortableInstance.destroy();
       sortableInstance = null;
     }
-    // 恢复原始顺序
     companies.value = JSON.parse(JSON.stringify(originalCompanies.value));
-    // 强制重新渲染列表，因为 Sortable.js 直接修改了 DOM 顺序
     listKey.value++;
   }
 };
 
 const completeSortOrder = async () => {
   try {
-    // 从 DOM 中获取当前的卡片顺序
     if (!sortableContainer.value) return;
-
     const cards = sortableContainer.value.querySelectorAll(".company-card");
     const newOrder: ExpressCompany[] = [];
 
@@ -242,15 +246,9 @@ const completeSortOrder = async () => {
       const company = companies.value.find(
         (c) => c.id === parseInt(card.getAttribute("data-id") || "0"),
       );
-      if (company) {
-        newOrder.push({
-          ...company,
-          sortOrder: index + 1,
-        });
-      }
+      if (company) newOrder.push({ ...company, sortOrder: index + 1 });
     });
 
-    // 如果没有找到 data-id，则按当前顺序处理
     if (newOrder.length === 0) {
       newOrder.push(
         ...companies.value.map((company, index) => ({
@@ -260,7 +258,6 @@ const completeSortOrder = async () => {
       );
     }
 
-    // 批量更新
     await Promise.all(
       newOrder.map((company) => updateExpressCompany(company.id!, company)),
     );
@@ -273,14 +270,10 @@ const completeSortOrder = async () => {
       sortableInstance.destroy();
       sortableInstance = null;
     }
-
-    // 清除缓存，使其他页面能获取最新数据
     await store.refresh();
-
     ElMessage.success("排序已保存");
   } catch (error: any) {
     ElMessage.error(error?.message || "保存排序失败");
-    // 重新加载以恢复原始顺序
     loadCompanies();
   }
 };
@@ -310,13 +303,10 @@ const handleDelete = async (company: ExpressCompany) => {
     });
     await deleteExpressCompany(company.id!);
     ElMessage.success("删除成功");
-    // 刷新数据
     await store.refresh();
     loadCompanies();
   } catch (error: any) {
-    if (error !== "cancel") {
-      ElMessage.error(error?.message || "删除失败");
-    }
+    if (error !== "cancel") ElMessage.error(error?.message || "删除失败");
   }
 };
 
@@ -331,13 +321,11 @@ const handleSave = async () => {
       await updateExpressCompany(form.value.id!, form.value);
       ElMessage.success("更新成功");
     } else {
-      // 新建时，排序号设为最后一位
       form.value.sortOrder = companies.value.length + 1;
       await createExpressCompany(form.value);
       ElMessage.success("创建成功");
     }
     dialogVisible.value = false;
-    // 刷新数据
     await store.refresh();
     loadCompanies();
   } catch (error: any) {
@@ -345,117 +333,150 @@ const handleSave = async () => {
   }
 };
 
-onMounted(() => {
-  loadCompanies();
-});
+onMounted(() => loadCompanies());
 </script>
 
 <style scoped>
+.system-settings {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.settings-tabs :deep(.el-tabs__header) {
+  margin-bottom: 20px;
+}
+
+.settings-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--primary-color);
+}
+
+.settings-tabs :deep(.el-tabs__active-bar) {
+  background: var(--gradient-primary);
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
 .company-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 16px;
 }
 
 .company-card {
-  transition: all 0.3s ease;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.company-card:hover {
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-md);
 }
 
 .company-card.sort-mode {
   cursor: move;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  user-select: none;
-}
-
-.sort-handle {
-  cursor: grab;
-  color: #909399;
-  font-size: 18px;
-  margin-right: 8px;
-  user-select: none;
-  transition: all 0.2s ease;
-}
-
-.sort-handle:hover {
-  color: #606266;
-  transform: scale(1.2);
-}
-
-.sort-handle:active {
-  cursor: grabbing;
-  color: #303133;
 }
 
 .card-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  width: 100%;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
-.company-card.sort-mode .card-header {
+.sort-handle {
+  color: var(--text-tertiary);
   cursor: grab;
+  font-size: 18px;
 }
 
-.company-card.sort-mode .card-header:active {
+.sort-handle:active {
   cursor: grabbing;
 }
 
 .company-name {
-  font-size: 16px;
-  font-weight: 500;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.company-name .name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.company-name .code {
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 
 .card-actions {
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 8px;
 }
 
-.company-info {
+.card-body {
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .info-row {
   display: flex;
+  align-items: center;
   gap: 8px;
   font-size: 13px;
 }
 
-.label {
-  color: #606266;
-  min-width: 70px;
+.info-icon {
+  color: var(--text-tertiary);
+  font-size: 14px;
 }
 
-.value {
-  color: #303133;
-  word-break: break-all;
+.info-label {
+  color: var(--text-tertiary);
+  min-width: 60px;
 }
 
-.value a {
-  color: #409eff;
+.info-value {
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.info-value a {
+  color: var(--primary-color);
   text-decoration: none;
 }
 
-.value a:hover {
+.info-value a:hover {
   text-decoration: underline;
 }
 
 :deep(.sortable-ghost) {
   opacity: 0.4;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  transform: scale(0.95);
-  user-select: none;
+  background: var(--bg-secondary);
 }
 
 :deep(.sortable-drag) {
-  opacity: 1;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-xl);
   transform: scale(1.02);
-  z-index: 1000;
-  user-select: none;
+}
+
+.settings-dialog :deep(.el-dialog__header) {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 16px;
 }
 </style>

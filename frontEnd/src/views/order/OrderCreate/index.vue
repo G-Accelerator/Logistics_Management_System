@@ -1,17 +1,27 @@
 <template>
-  <page-container title="创建订单" description="创建新的物流订单">
-    <!-- 订单表单 -->
-    <el-card shadow="never" class="order-form-card">
+  <div class="order-create">
+    <div class="page-header">
+      <div class="header-content">
+        <h3 class="page-title">
+          <el-icon class="title-icon"><DocumentAdd /></el-icon>
+          创建订单
+        </h3>
+        <p class="page-description">创建新的物流订单，填写货物和收发货信息</p>
+      </div>
+    </div>
+
+    <el-card class="order-form-card">
       <el-form
         ref="formRef"
         :model="orderForm"
         :rules="rules"
         label-position="top"
       >
-        <!-- 货物信息区块 -->
+        <!-- 货物信息 -->
         <div class="form-section">
-          <div class="section-title">
-            <el-icon><Box /></el-icon>货物信息
+          <div class="section-header">
+            <el-icon class="section-icon"><Box /></el-icon>
+            <span>货物信息</span>
           </div>
           <el-row :gutter="16">
             <el-col :xs="24" :sm="12" :md="5">
@@ -86,10 +96,11 @@
           </el-row>
         </div>
 
-        <!-- 发货信息区块 -->
+        <!-- 发货信息 -->
         <div class="form-section">
-          <div class="section-title">
-            <el-icon><Location /></el-icon>发货信息
+          <div class="section-header">
+            <el-icon class="section-icon"><Location /></el-icon>
+            <span>发货信息</span>
           </div>
           <el-row :gutter="16">
             <el-col :xs="24" :sm="24" :md="12">
@@ -138,10 +149,11 @@
           </el-row>
         </div>
 
-        <!-- 收货信息区块 -->
+        <!-- 收货信息 -->
         <div class="form-section">
-          <div class="section-title">
-            <el-icon><Position /></el-icon>收货信息
+          <div class="section-header">
+            <el-icon class="section-icon"><Position /></el-icon>
+            <span>收货信息</span>
           </div>
           <el-row :gutter="16">
             <el-col :xs="24" :sm="24" :md="12">
@@ -194,13 +206,13 @@
       </el-form>
     </el-card>
 
-    <!-- 底部操作按钮 -->
     <div class="bottom-actions">
       <el-button
-        type="success"
+        type="primary"
         size="large"
         @click="submitOrder"
         :loading="submitting"
+        class="submit-btn"
       >
         <el-icon><Check /></el-icon>提交订单
       </el-button>
@@ -208,7 +220,7 @@
         >重置</el-button
       >
     </div>
-  </page-container>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -220,8 +232,14 @@ import {
   type FormInstance,
   type FormRules,
 } from "element-plus";
-import { Location, Position, Aim, Box, Check } from "@element-plus/icons-vue";
-import PageContainer from "../../../components/layout/PageContainer/index.vue";
+import {
+  Location,
+  Position,
+  Aim,
+  Box,
+  Check,
+  DocumentAdd,
+} from "@element-plus/icons-vue";
 import ExpressCompanySelect from "../../../components/business/ExpressCompanySelect/index.vue";
 import { createOrder } from "../../../api/order";
 import { useExpressCompanyStore } from "../../../store/expressCompany";
@@ -390,9 +408,7 @@ const submitOrder = async () => {
             resetForm();
             router.push("/order/list");
           })
-          .catch(() => {
-            resetForm();
-          });
+          .catch(() => resetForm());
       } catch {
         ElMessage.error("创建订单失败");
       } finally {
@@ -402,65 +418,101 @@ const submitOrder = async () => {
   });
 };
 
-const resetForm = () => {
-  formRef.value?.resetFields();
-};
+const resetForm = () => formRef.value?.resetFields();
 
 onMounted(async () => {
-  // 初始化地图插件
   (AMap as any).plugin(
     ["AMap.Geocoder", "AMap.AutoComplete", "AMap.Geolocation"],
     () => {},
   );
-
-  // 初始化快递公司，选中第一个
   const store = useExpressCompanyStore();
-  // 如果数据还没加载，等待加载完成
-  if (store.companies.length === 0) {
-    await store.load();
-  }
+  if (store.companies.length === 0) await store.load();
   const companies = store.companies as any;
-  if (companies && companies.length > 0) {
+  if (companies && companies.length > 0)
     orderForm.expressCompany = companies[0].code;
-  }
 });
 </script>
 
 <style scoped>
+.order-create {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-header {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  border: 1px solid var(--border-color);
+}
+
+.page-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-icon {
+  color: var(--primary-color);
+  font-size: 20px;
+}
+
+.page-description {
+  margin: 6px 0 0 0;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
 .order-form-card {
-  margin-bottom: 16px;
+  border-radius: var(--radius-lg);
 }
+
 .form-section {
-  padding: 16px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border-color);
 }
+
 .form-section:last-of-type {
   border-bottom: none;
 }
-.section-title {
+
+.section-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 15px;
   font-weight: 600;
-  color: var(--el-text-color-primary);
-  margin-bottom: 16px;
+  color: var(--text-primary);
+  margin-bottom: 20px;
 }
-.section-title .el-icon {
-  color: var(--el-color-primary);
+
+.section-icon {
+  color: var(--primary-color);
+  font-size: 18px;
 }
+
 .bottom-actions {
   display: flex;
   justify-content: center;
   gap: 16px;
   padding: 20px 0;
-  margin-top: 16px;
 }
+
+.submit-btn {
+  min-width: 140px;
+}
+
 .location-btn {
   cursor: pointer;
   transition: color 0.2s;
 }
+
 .location-btn:hover {
-  color: var(--el-color-primary);
+  color: var(--primary-color);
 }
 </style>

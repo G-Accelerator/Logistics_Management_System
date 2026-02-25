@@ -7,6 +7,7 @@ import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 import router from "./router";
 import App from "./App.vue";
 import "./styles/variables.css";
+import "./styles/common.css";
 import "./styles/sidebar.css";
 import "./style.css";
 

@@ -10,78 +10,75 @@
 
     <!-- 概览卡片区域 -->
     <el-row :gutter="20" class="overview-cards">
-      <el-col :xs="24" :sm="12" :md="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-icon total">
-              <el-icon><Document /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ overview.totalOrders }}</div>
-              <div class="stat-label">总订单数</div>
-            </div>
+      <el-col :xs="12" :sm="6">
+        <div class="stat-card">
+          <div class="stat-icon primary">
+            <el-icon><Document /></el-icon>
           </div>
-        </el-card>
+          <div class="stat-info">
+            <div class="stat-value">{{ overview.totalOrders }}</div>
+            <div class="stat-label">总订单数</div>
+          </div>
+        </div>
       </el-col>
-      <el-col :xs="24" :sm="12" :md="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-icon month">
-              <el-icon><Calendar /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">
-                {{ overview.monthOrders }}
-                <span
-                  class="growth"
-                  :class="overview.monthGrowth >= 0 ? 'up' : 'down'"
-                >
-                  <el-icon v-if="overview.monthGrowth >= 0"><Top /></el-icon>
-                  <el-icon v-else><Bottom /></el-icon>
-                  {{ Math.abs(overview.monthGrowth).toFixed(1) }}%
-                </span>
-              </div>
-              <div class="stat-label">本月订单</div>
-            </div>
+      <el-col :xs="12" :sm="6">
+        <div class="stat-card">
+          <div class="stat-icon success">
+            <el-icon><Calendar /></el-icon>
           </div>
-        </el-card>
+          <div class="stat-info">
+            <div class="stat-value">
+              {{ overview.monthOrders }}
+              <span
+                class="growth"
+                :class="overview.monthGrowth >= 0 ? 'up' : 'down'"
+              >
+                <el-icon v-if="overview.monthGrowth >= 0"><Top /></el-icon>
+                <el-icon v-else><Bottom /></el-icon>
+                {{ Math.abs(overview.monthGrowth).toFixed(1) }}%
+              </span>
+            </div>
+            <div class="stat-label">本月订单</div>
+          </div>
+        </div>
       </el-col>
-      <el-col :xs="24" :sm="12" :md="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-icon pending">
-              <el-icon><Clock /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ overview.pendingOrders }}</div>
-              <div class="stat-label">待处理订单</div>
-            </div>
+      <el-col :xs="12" :sm="6">
+        <div class="stat-card">
+          <div class="stat-icon warning">
+            <el-icon><Clock /></el-icon>
           </div>
-        </el-card>
+          <div class="stat-info">
+            <div class="stat-value">{{ overview.pendingOrders }}</div>
+            <div class="stat-label">待处理订单</div>
+          </div>
+        </div>
       </el-col>
-      <el-col :xs="24" :sm="12" :md="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-icon rate">
-              <el-icon><CircleCheck /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">
-                {{ overview.completionRate.toFixed(1) }}%
-              </div>
-              <div class="stat-label">完成率</div>
-            </div>
+      <el-col :xs="12" :sm="6">
+        <div class="stat-card">
+          <div class="stat-icon info">
+            <el-icon><CircleCheck /></el-icon>
           </div>
-        </el-card>
+          <div class="stat-info">
+            <div class="stat-value">
+              {{ overview.completionRate.toFixed(1) }}%
+            </div>
+            <div class="stat-label">完成率</div>
+          </div>
+        </div>
       </el-col>
     </el-row>
 
     <!-- 图表区域 - 第一行 -->
     <el-row :gutter="20" class="chart-row">
       <el-col :xs="24" :lg="14">
-        <el-card shadow="hover" class="chart-card">
+        <el-card class="chart-card">
           <template #header>
-            <span>订单趋势</span>
+            <div class="chart-header">
+              <div class="header-title">
+                <el-icon class="header-icon"><TrendCharts /></el-icon>
+                <span>订单趋势</span>
+              </div>
+            </div>
           </template>
           <LineChart
             :x-data="trendData.dates"
@@ -93,9 +90,14 @@
         </el-card>
       </el-col>
       <el-col :xs="24" :lg="10">
-        <el-card shadow="hover" class="chart-card">
+        <el-card class="chart-card">
           <template #header>
-            <span>订单状态分布</span>
+            <div class="chart-header">
+              <div class="header-title">
+                <el-icon class="header-icon"><PieChart as any /></el-icon>
+                <span>订单状态分布</span>
+              </div>
+            </div>
           </template>
           <PieChart
             :data="statusDistributionData"
@@ -111,10 +113,13 @@
     <!-- 图表区域 - 第二行 -->
     <el-row :gutter="20" class="chart-row">
       <el-col :xs="24" :lg="12">
-        <el-card shadow="hover" class="chart-card">
+        <el-card class="chart-card">
           <template #header>
             <div class="chart-header">
-              <span>热门城市TOP10</span>
+              <div class="header-title">
+                <el-icon class="header-icon"><Location /></el-icon>
+                <span>热门城市TOP10</span>
+              </div>
               <el-radio-group
                 v-model="cityType"
                 size="small"
@@ -130,22 +135,27 @@
             :y-data="topCitiesData.values"
             series-name="订单数"
             height="320px"
-            bar-color="#67C23A"
+            bar-color="#10b981"
             :loading="loading.cities"
           />
         </el-card>
       </el-col>
       <el-col :xs="24" :lg="12">
-        <el-card shadow="hover" class="chart-card">
+        <el-card class="chart-card">
           <template #header>
-            <span>快递公司分布</span>
+            <div class="chart-header">
+              <div class="header-title">
+                <el-icon class="header-icon"><Van /></el-icon>
+                <span>快递公司分布</span>
+              </div>
+            </div>
           </template>
           <BarChart
             :x-data="expressCompaniesData.labels"
             :y-data="expressCompaniesData.values"
             series-name="订单数"
             height="320px"
-            bar-color="#E6A23C"
+            bar-color="#0ea5e9"
             :loading="loading.express"
           />
         </el-card>
@@ -164,6 +174,10 @@ import {
   CircleCheck,
   Top,
   Bottom,
+  TrendCharts,
+  Location,
+  Van,
+  PieChart as PieChartIcon,
 } from "@element-plus/icons-vue";
 import LineChart from "../../../components/charts/LineChart.vue";
 import PieChart from "../../../components/charts/PieChart.vue";
@@ -180,13 +194,9 @@ import {
   type StatusDistribution,
 } from "../../../api/statistics";
 
-// 时间范围
 const timeRange = ref(7);
-
-// 城市类型
 const cityType = ref<"origin" | "destination">("origin");
 
-// 加载状态
 const loading = reactive({
   overview: false,
   trend: false,
@@ -195,7 +205,6 @@ const loading = reactive({
   express: false,
 });
 
-// 概览数据
 const overview = ref<StatisticsOverview>({
   totalOrders: 0,
   monthOrders: 0,
@@ -204,28 +213,11 @@ const overview = ref<StatisticsOverview>({
   monthGrowth: 0,
 });
 
-// 趋势数据
-const trendData = ref<TrendData>({
-  dates: [],
-  counts: [],
-});
-
-// 状态分布数据（转换为饼图格式）
+const trendData = ref<TrendData>({ dates: [], counts: [] });
 const statusDistributionData = ref<{ name: string; value: number }[]>([]);
+const topCitiesData = ref<DistributionData>({ labels: [], values: [] });
+const expressCompaniesData = ref<DistributionData>({ labels: [], values: [] });
 
-// 热门城市数据
-const topCitiesData = ref<DistributionData>({
-  labels: [],
-  values: [],
-});
-
-// 快递公司数据
-const expressCompaniesData = ref<DistributionData>({
-  labels: [],
-  values: [],
-});
-
-// 状态名称映射
 const statusNameMap: Record<string, string> = {
   pending: "待发货",
   shipping: "运输中",
@@ -233,33 +225,28 @@ const statusNameMap: Record<string, string> = {
   cancelled: "已取消",
 };
 
-// 获取概览数据
 async function fetchOverview() {
   loading.overview = true;
   try {
-    const data = await getStatisticsOverview();
-    overview.value = data;
-  } catch (error) {
+    overview.value = await getStatisticsOverview();
+  } catch {
     ElMessage.error("获取概览数据失败");
   } finally {
     loading.overview = false;
   }
 }
 
-// 获取趋势数据
 async function fetchTrend() {
   loading.trend = true;
   try {
-    const data = await getOrderTrend({ days: timeRange.value });
-    trendData.value = data;
-  } catch (error) {
+    trendData.value = await getOrderTrend({ days: timeRange.value });
+  } catch {
     ElMessage.error("获取趋势数据失败");
   } finally {
     loading.trend = false;
   }
 }
 
-// 获取状态分布
 async function fetchStatusDistribution() {
   loading.status = true;
   try {
@@ -268,53 +255,46 @@ async function fetchStatusDistribution() {
       name: statusNameMap[key] || key,
       value: value as number,
     }));
-  } catch (error) {
+  } catch {
     ElMessage.error("获取状态分布失败");
   } finally {
     loading.status = false;
   }
 }
 
-// 获取热门城市
 async function fetchTopCities() {
   loading.cities = true;
   try {
-    const data = await getTopCities({ type: cityType.value, limit: 10 });
-    topCitiesData.value = data;
-  } catch (error) {
+    topCitiesData.value = await getTopCities({
+      type: cityType.value,
+      limit: 10,
+    });
+  } catch {
     ElMessage.error("获取热门城市失败");
   } finally {
     loading.cities = false;
   }
 }
 
-// 获取快递公司统计
 async function fetchExpressCompanies() {
   loading.express = true;
   try {
-    const data = await getExpressCompanies();
-    // 后端已返回中文名称，直接使用
-    expressCompaniesData.value = data;
-  } catch (error) {
+    expressCompaniesData.value = await getExpressCompanies();
+  } catch {
     ElMessage.error("获取快递公司统计失败");
   } finally {
     loading.express = false;
   }
 }
 
-// 时间范围变化
 function handleTimeRangeChange() {
   fetchTrend();
 }
-
-// 状态饼图点击
 function handleStatusClick(data: { name: string; value: number }) {
   ElMessage.info(`${data.name}: ${data.value} 单`);
 }
 
-// 初始化加载所有数据
-onMounted(async () => {
-  // 加载统计数据
+onMounted(() => {
   fetchOverview();
   fetchTrend();
   fetchStatusDistribution();
@@ -325,35 +305,41 @@ onMounted(async () => {
 
 <style scoped>
 .statistics-report {
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .filter-bar {
-  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .overview-cards {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .stat-card {
-  margin-bottom: 20px;
-}
-
-.stat-card :deep(.el-card__body) {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
   padding: 20px;
-}
-
-.stat-content {
   display: flex;
   align-items: center;
   gap: 16px;
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-normal);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-light);
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -361,20 +347,29 @@ onMounted(async () => {
   color: #fff;
 }
 
-.stat-icon.total {
-  background: linear-gradient(135deg, #409eff, #66b1ff);
+.stat-icon.primary {
+  background: var(--gradient-primary);
 }
-
-.stat-icon.month {
-  background: linear-gradient(135deg, #67c23a, #85ce61);
+.stat-icon.success {
+  background: linear-gradient(
+    135deg,
+    var(--success-color) 0%,
+    var(--success-light) 100%
+  );
 }
-
-.stat-icon.pending {
-  background: linear-gradient(135deg, #e6a23c, #ebb563);
+.stat-icon.warning {
+  background: linear-gradient(
+    135deg,
+    var(--warning-color) 0%,
+    var(--warning-light) 100%
+  );
 }
-
-.stat-icon.rate {
-  background: linear-gradient(135deg, #909399, #a6a9ad);
+.stat-icon.info {
+  background: linear-gradient(
+    135deg,
+    var(--info-color) 0%,
+    var(--info-light) 100%
+  );
 }
 
 .stat-info {
@@ -382,21 +377,21 @@ onMounted(async () => {
 }
 
 .stat-value {
-  font-size: 28px;
-  font-weight: 600;
-  color: #303133;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
   line-height: 1.2;
 }
 
 .stat-label {
-  font-size: 14px;
-  color: #909399;
+  font-size: 13px;
+  color: var(--text-tertiary);
   margin-top: 4px;
 }
 
 .growth {
-  font-size: 14px;
-  font-weight: normal;
+  font-size: 13px;
+  font-weight: 500;
   margin-left: 8px;
   display: inline-flex;
   align-items: center;
@@ -404,25 +399,19 @@ onMounted(async () => {
 }
 
 .growth.up {
-  color: #67c23a;
+  color: var(--success-color);
 }
-
 .growth.down {
-  color: #f56c6c;
+  color: var(--danger-color);
 }
 
 .chart-row {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .chart-card {
+  border-radius: var(--radius-lg);
   margin-bottom: 20px;
-}
-
-.chart-card :deep(.el-card__header) {
-  padding: 16px 20px;
-  font-weight: 500;
-  color: #303133;
 }
 
 .chart-header {
@@ -431,17 +420,30 @@ onMounted(async () => {
   align-items: center;
 }
 
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.header-icon {
+  color: var(--primary-color);
+}
+
 @media (max-width: 768px) {
+  .stat-card {
+    padding: 16px;
+  }
   .stat-value {
     font-size: 22px;
   }
-
   .stat-icon {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     font-size: 20px;
   }
-
   .chart-header {
     flex-direction: column;
     align-items: flex-start;

@@ -1,75 +1,110 @@
-/* 侧边栏全局样式 */
+/* 侧边栏菜单样式 - 物流追踪系统 */
 
-/* 菜单项和子菜单标题 */
+/* 菜单项基础样式 */
 .sidebar-menu .el-menu-item,
 .sidebar-menu .el-sub-menu__title {
-  color: var(--sidebar-menu-text);
-  transition: all 0.3s;
+  height: 48px;
+  line-height: 48px;
+  margin: 4px 12px;
+  padding: 0 16px !important;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  transition: all 0.25s ease;
+}
+
+/* 菜单图标 */
+.sidebar-menu .el-menu-item .el-icon,
+.sidebar-menu .el-sub-menu__title .el-icon {
+  font-size: 18px;
+  margin-right: 12px;
+  color: inherit;
 }
 
 /* 悬停效果 */
 .sidebar-menu .el-menu-item:hover,
 .sidebar-menu .el-sub-menu__title:hover {
-  background-color: var(--sidebar-menu-hover) !important;
-  color: white;
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: #ffffff;
 }
 
-/* 选中状态 - 增强选择器优先级 */
+/* 选中状态 */
 .sidebar-menu.el-menu .el-menu-item.is-active,
 .sidebar-menu .el-menu-item.is-active,
 .el-menu.sidebar-menu .el-menu-item.is-active {
-  background-color: var(--sidebar-menu-active) !important;
-  color: white !important;
-  position: relative;
+  background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%) !important;
+  color: #ffffff !important;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
 }
 
-/* 选中状态左侧指示条 */
+/* 选中状态无需左侧指示条 */
 .sidebar-menu .el-menu-item.is-active::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background-color: var(--primary-light);
+  display: none;
 }
 
-/* 子菜单项缩进 */
+/* 子菜单项 */
 .sidebar-menu .el-sub-menu .el-menu-item {
-  padding-left: 50px !important;
-  min-width: 200px;
+  height: 44px;
+  line-height: 44px;
+  padding-left: 52px !important;
+  margin: 2px 12px;
+  font-size: 13px;
 }
 
-/* 子菜单背景色 */
+/* 子菜单背景 */
 .sidebar-menu .el-sub-menu .el-menu {
-  background-color: var(--sidebar-bg) !important;
+  background: transparent !important;
 }
 
 .sidebar-menu .el-sub-menu .el-menu-item:not(.is-active) {
-  background-color: var(--sidebar-bg) !important;
+  background: transparent !important;
 }
 
-/* 子菜单项悬停效果 */
+/* 子菜单悬停 */
 .sidebar-menu .el-sub-menu .el-menu-item:not(.is-active):hover {
-  background-color: var(--sidebar-menu-hover) !important;
-  color: white !important;
+  background: rgba(56, 189, 248, 0.1) !important;
+  color: #ffffff !important;
 }
 
-/* 子菜单选中状态 - 增强选择器优先级 */
+/* 子菜单选中 */
 .sidebar-menu .el-sub-menu .el-menu .el-menu-item.is-active,
 .sidebar-menu .el-sub-menu .el-menu-item.is-active,
 .sidebar-menu.el-menu .el-sub-menu .el-menu-item.is-active {
-  background-color: var(--sidebar-menu-active) !important;
-  color: white !important;
+  background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
 }
 
-/* 折叠状态下隐藏文字 */
+/* 子菜单展开箭头 */
+.sidebar-menu .el-sub-menu__icon-arrow {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+}
+
+/* 折叠状态 */
+.sidebar-menu.el-menu--collapse .el-menu-item,
+.sidebar-menu.el-menu--collapse .el-sub-menu__title {
+  margin: 4px 8px;
+  padding: 0 !important;
+  justify-content: center;
+}
+
+.sidebar-menu.el-menu--collapse .el-menu-item .el-icon,
+.sidebar-menu.el-menu--collapse .el-sub-menu__title .el-icon {
+  margin-right: 0;
+}
+
 .sidebar-menu.el-menu--collapse .el-sub-menu__title span,
 .sidebar-menu.el-menu--collapse .el-menu-item span {
   display: none;
 }
 
-/* 折叠状态下隐藏箭头 */
 .sidebar-menu.el-menu--collapse .el-sub-menu__icon-arrow {
   display: none;
+}
+
+/* 折叠状态下的弹出菜单 */
+.el-menu--vertical:not(.el-menu--collapse) .el-sub-menu__title {
+  padding-right: 40px;
 }

@@ -1,5 +1,6 @@
 <template>
   <page-container title="订单列表" description="管理所有物流订单">
+    <!-- <template #icon><List /></template> -->
     <data-table
       ref="tableRef"
       :search-config="searchConfig"
@@ -13,13 +14,10 @@
       @selection-change="handleSelectionChange"
     />
 
-    <!-- 导入对话框 -->
     <import-dialog
       v-model="importDialogVisible"
       @success="handleImportSuccess"
     />
-
-    <!-- 发货抽屉 -->
     <ship-drawer
       v-model="shipDialogVisible"
       :order="shipOrder"
@@ -38,6 +36,7 @@ import {
   Upload,
   Download,
   Delete,
+  List,
 } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
@@ -219,7 +218,7 @@ const columns = [
       };
       return h(
         ElTag,
-        { type: status.type as any, size: "small" },
+        { type: status.type as any, size: "small", effect: "light" },
         () => status.label,
       );
     },
@@ -230,9 +229,8 @@ const columns = [
     width: 180,
     showOverflowTooltip: true,
     render: (row: any) => {
-      if (!row.trackingNo) {
-        return <span style="color: #999;">-</span>;
-      }
+      if (!row.trackingNo)
+        return <span style="color: var(--text-tertiary);">-</span>;
       return (
         <div style="display: flex; align-items: center; gap: 4px;">
           <span style="overflow: hidden; text-overflow: ellipsis;">
@@ -258,7 +256,6 @@ const columns = [
     width: 90,
     formatter: (row: any) => cargoTypeMap[row.cargoType] || row.cargoType,
   },
-
   {
     prop: "cargoWeight",
     label: "重量(kg)",
@@ -291,7 +288,6 @@ const columns = [
   { prop: "senderPhone", label: "发货人电话", width: 120 },
   { prop: "receiverName", label: "收货人", width: 80 },
   { prop: "receiverPhone", label: "收货人电话", width: 120 },
-
   { prop: "remark", label: "备注", minWidth: 100, showOverflowTooltip: true },
   { prop: "createTime", label: "创建时间", width: 160 },
 ];

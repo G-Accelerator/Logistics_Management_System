@@ -1,5 +1,6 @@
 <template>
   <page-container title="我的发货" description="管理待发货订单，确认发货">
+    <template #icon><Van /></template>
     <data-table
       ref="tableRef"
       :search-config="searchConfig"
@@ -11,7 +12,6 @@
       :operation-width="120"
     />
 
-    <!-- 发货抽屉 -->
     <ship-drawer
       v-model="shipDialogVisible"
       :order="currentOrder"
@@ -23,7 +23,7 @@
 <script setup lang="ts">
 import { h, ref, onMounted } from "vue";
 import { ElButton, ElTag, ElMessage } from "element-plus";
-import { DocumentCopy } from "@element-plus/icons-vue";
+import { DocumentCopy, Van } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
 import ShipDrawer from "../../../components/business/ShipDrawer/index.vue";
@@ -31,12 +31,9 @@ import { getSellerOrders } from "../../../api/order";
 import type { Order } from "../../../api/order/types";
 
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
-
-// 发货弹窗状态
 const shipDialogVisible = ref(false);
 const currentOrder = ref<Order | null>(null);
 
-// 搜索配置
 const searchConfig = [
   {
     prop: "orderNo",
@@ -58,7 +55,6 @@ const searchConfig = [
   },
 ];
 
-// 复制订单号
 const copyOrderNo = async (orderNo: string) => {
   try {
     await navigator.clipboard.writeText(orderNo);
@@ -68,7 +64,6 @@ const copyOrderNo = async (orderNo: string) => {
   }
 };
 
-// 表格列配置
 const columns = [
   {
     prop: "orderNo",
@@ -114,7 +109,7 @@ const columns = [
               },
             }),
           ])
-        : h("span", { style: "color: #999;" }, "-"),
+        : h("span", { style: "color: var(--text-tertiary);" }, "-"),
   },
   { prop: "cargoName", label: "货物名称", minWidth: 120 },
   {
@@ -137,51 +132,43 @@ const columns = [
     label: "状态",
     width: 90,
     align: "center" as const,
-    render: () => h(ElTag, { type: "warning", size: "small" }, () => "待发货"),
+    render: () =>
+      h(
+        ElTag,
+        { type: "warning", size: "small", effect: "light" },
+        () => "待发货",
+      ),
   },
   { prop: "createTime", label: "创建时间", width: 160 },
 ];
 
-// 打开发货弹窗
 const openShipDialog = (row: any) => {
   currentOrder.value = row;
   shipDialogVisible.value = true;
 };
 
-// 发货成功回调
-const handleShipSuccess = () => {
-  tableRef.value?.refresh();
-};
+const handleShipSuccess = () => tableRef.value?.refresh();
 
-// 操作按钮
 const operations = [
-  {
-    label: "确认发货",
-    type: "primary" as const,
-    handler: openShipDialog,
-  },
+  { label: "确认发货", type: "primary" as const, handler: openShipDialog },
 ];
 
-// 从后端API加载数据 - 只加载卖家的待发货订单
 const loadData = async (params: any) => {
   try {
     const result = await getSellerOrders({
       page: params.page,
       pageSize: params.pageSize,
       orderNo: params.orderNo,
-      status: "pending", // 只查询待发货订单
+      status: "pending",
       cargoName: params.cargoName,
       receiverName: params.receiverName,
     });
     return { data: result.data, total: result.total };
-  } catch (error) {
+  } catch {
     ElMessage.error("获取订单列表失败");
     return { data: [], total: 0 };
   }
 };
 
-// 初始化快递公司数据
-onMounted(() => {
-  // 数据由 ExpressCompanySelect 组件自动加载
-});
+onMounted(() => {});
 </script>

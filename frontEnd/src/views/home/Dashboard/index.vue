@@ -1,102 +1,113 @@
 <template>
   <div class="dashboard">
+    <!-- 欢迎横幅 -->
+    <div class="welcome-banner">
+      <div class="welcome-content">
+        <div class="welcome-text">
+          <h2>
+            {{ getGreeting() }}，{{ userStore.userInfo?.nickname || "用户" }}
+          </h2>
+          <p>欢迎使用物流轨迹追踪系统，今天也是高效的一天</p>
+        </div>
+        <div class="welcome-illustration">
+          <svg viewBox="0 0 200 120" fill="none">
+            <path
+              d="M20 80 Q60 40 100 60 T180 50"
+              stroke="rgba(255,255,255,0.3)"
+              stroke-width="2"
+              fill="none"
+              stroke-dasharray="4 4"
+            />
+            <circle cx="20" cy="80" r="6" fill="#38bdf8" />
+            <circle cx="100" cy="60" r="6" fill="#22d3ee" />
+            <circle cx="180" cy="50" r="6" fill="#38bdf8" />
+            <rect
+              x="85"
+              y="75"
+              width="30"
+              height="20"
+              rx="3"
+              fill="rgba(255,255,255,0.2)"
+            />
+            <circle cx="90" cy="100" r="4" fill="rgba(255,255,255,0.3)" />
+            <circle cx="110" cy="100" r="4" fill="rgba(255,255,255,0.3)" />
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 统计卡片 -->
     <el-row :gutter="20" class="stats-row">
-      <el-col :span="6">
-        <el-card class="stat-card">
-          <div class="stat-content">
-            <div
-              class="stat-icon"
-              style="
-                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-              "
-            >
-              <el-icon :size="30"><Document /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.total }}</div>
-              <div class="stat-label">总订单数</div>
-            </div>
+      <el-col :xs="12" :sm="6">
+        <div class="stat-card" @click="handleViewMore">
+          <div class="stat-icon primary">
+            <el-icon :size="28"><Document /></el-icon>
           </div>
-        </el-card>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.total }}</div>
+            <div class="stat-label">总订单数</div>
+          </div>
+        </div>
       </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card">
-          <div class="stat-content">
-            <div
-              class="stat-icon"
-              style="
-                background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-              "
-            >
-              <el-icon :size="30"><Van /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.shipping }}</div>
-              <div class="stat-label">运输中</div>
-            </div>
+      <el-col :xs="12" :sm="6">
+        <div class="stat-card">
+          <div class="stat-icon info">
+            <el-icon :size="28"><Van /></el-icon>
           </div>
-        </el-card>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.shipping }}</div>
+            <div class="stat-label">运输中</div>
+          </div>
+        </div>
       </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card">
-          <div class="stat-content">
-            <div
-              class="stat-icon"
-              style="
-                background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-              "
-            >
-              <el-icon :size="30"><Clock /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.pending }}</div>
-              <div class="stat-label">待发货</div>
-            </div>
+      <el-col :xs="12" :sm="6">
+        <div class="stat-card">
+          <div class="stat-icon warning">
+            <el-icon :size="28"><Clock /></el-icon>
           </div>
-        </el-card>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.pending }}</div>
+            <div class="stat-label">待发货</div>
+          </div>
+        </div>
       </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card">
-          <div class="stat-content">
-            <div
-              class="stat-icon"
-              style="
-                background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-              "
-            >
-              <el-icon :size="30"><CircleCheck /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.completed }}</div>
-              <div class="stat-label">已完成</div>
-            </div>
+      <el-col :xs="12" :sm="6">
+        <div class="stat-card">
+          <div class="stat-icon success">
+            <el-icon :size="28"><CircleCheck /></el-icon>
           </div>
-        </el-card>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.completed }}</div>
+            <div class="stat-label">已完成</div>
+          </div>
+        </div>
       </el-col>
     </el-row>
 
+    <!-- 内容区 -->
     <el-row :gutter="20" class="content-row">
-      <el-col :span="16">
-        <el-card>
+      <el-col :xs="24" :lg="16">
+        <el-card class="recent-orders-card">
           <template #header>
             <div class="card-header">
-              <span>最近订单</span>
-              <el-button type="primary" link @click="handleViewMore"
-                >查看更多</el-button
-              >
+              <div class="header-title">
+                <el-icon class="header-icon"><List /></el-icon>
+                <span>最近订单</span>
+              </div>
+              <el-button type="primary" link @click="handleViewMore">
+                查看更多 <el-icon><ArrowRight /></el-icon>
+              </el-button>
             </div>
           </template>
           <el-table
             :data="recentOrders"
-            style="width: 100%"
             v-loading="loading"
+            class="orders-table"
           >
-            <el-table-column prop="orderNo" label="订单号" width="200">
+            <el-table-column prop="orderNo" label="订单号" width="180">
               <template #default="{ row }">
-                <div style="display: flex; align-items: center; gap: 4px">
-                  <span style="overflow: hidden; text-overflow: ellipsis">{{
-                    row.orderNo
-                  }}</span>
+                <div class="order-no-cell">
+                  <span>{{ row.orderNo }}</span>
                   <el-button
                     size="small"
                     :icon="DocumentCopy"
@@ -113,9 +124,18 @@
               min-width="150"
               show-overflow-tooltip
             />
-            <el-table-column prop="status" label="状态" width="100">
+            <el-table-column
+              prop="status"
+              label="状态"
+              width="100"
+              align="center"
+            >
               <template #default="{ row }">
-                <el-tag :type="getStatusType(row.status)" size="small">
+                <el-tag
+                  :type="getStatusType(row.status)"
+                  size="small"
+                  effect="light"
+                >
                   {{ getStatusText(row.status) }}
                 </el-tag>
               </template>
@@ -124,49 +144,49 @@
           </el-table>
         </el-card>
       </el-col>
-      <el-col :span="8">
-        <el-card>
+
+      <el-col :xs="24" :lg="8">
+        <el-card class="quick-actions-card">
           <template #header>
-            <div class="card-header"><span>快捷操作</span></div>
+            <div class="card-header">
+              <div class="header-title">
+                <el-icon class="header-icon"><Operation /></el-icon>
+                <span>快捷操作</span>
+              </div>
+            </div>
           </template>
           <div class="quick-actions">
             <el-button
               v-if="!isBuyer && !isSeller"
-              type="primary"
-              :icon="Plus"
               class="action-btn"
               @click="handleCreateOrder"
             >
-              创建订单
+              <el-icon><Plus /></el-icon>
+              <span>创建订单</span>
             </el-button>
             <el-button
               v-if="isBuyer"
-              type="primary"
-              :icon="Document"
               class="action-btn"
               @click="handleMyOrders"
             >
-              我的订单
+              <el-icon><Document /></el-icon>
+              <span>我的订单</span>
             </el-button>
             <el-button
               v-if="isSeller"
-              type="primary"
-              :icon="Van"
               class="action-btn"
               @click="handleMyShipment"
             >
-              我的发货
+              <el-icon><Van /></el-icon>
+              <span>我的发货</span>
             </el-button>
-            <el-button
-              type="success"
-              :icon="Search"
-              class="action-btn"
-              @click="handleTrack"
-            >
-              查询物流
+            <el-button class="action-btn" @click="handleTrack">
+              <el-icon><Location /></el-icon>
+              <span>查询物流</span>
             </el-button>
-            <el-button :icon="Refresh" class="action-btn" @click="loadData">
-              刷新数据
+            <el-button class="action-btn" @click="loadData">
+              <el-icon><Refresh /></el-icon>
+              <span>刷新数据</span>
             </el-button>
           </div>
         </el-card>
@@ -181,13 +201,16 @@ import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import {
   Plus,
-  Search,
   Document,
   Van,
   Clock,
   CircleCheck,
   Refresh,
   DocumentCopy,
+  Location,
+  List,
+  Operation,
+  ArrowRight,
 } from "@element-plus/icons-vue";
 import {
   getOrders,
@@ -203,23 +226,14 @@ const router = useRouter();
 const userStore = useUserStore();
 const loading = ref(false);
 
-// 是否为买家
 const isBuyer = computed(
   () => userStore.userInfo?.role === "buyer" || !!userStore.buyerPhone,
 );
-
-// 是否为卖家
 const isSeller = computed(
   () => userStore.userInfo?.role === "seller" || !!userStore.sellerPhone,
 );
 
-const stats = ref({
-  total: 0,
-  shipping: 0,
-  pending: 0,
-  completed: 0,
-});
-
+const stats = ref({ total: 0, shipping: 0, pending: 0, completed: 0 });
 const recentOrders = ref<any[]>([]);
 
 const statusMap: Record<string, { text: string; type: string }> = {
@@ -232,7 +246,13 @@ const statusMap: Record<string, { text: string; type: string }> = {
 const getStatusType = (status: string) => statusMap[status]?.type || "info";
 const getStatusText = (status: string) => statusMap[status]?.text || status;
 
-// 复制订单号
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "早上好";
+  if (hour < 18) return "下午好";
+  return "晚上好";
+};
+
 const copyOrderNo = async (orderNo: string) => {
   try {
     await navigator.clipboard.writeText(orderNo);
@@ -246,7 +266,6 @@ const loadData = async () => {
   loading.value = true;
   try {
     if (isBuyer.value) {
-      // 买家使用专用接口
       const [statsData, ordersData] = await Promise.all([
         getBuyerStats(),
         getBuyerOrders({ page: 1, pageSize: 5 }),
@@ -254,7 +273,6 @@ const loadData = async () => {
       stats.value = statsData;
       recentOrders.value = ordersData.data;
     } else if (isSeller.value) {
-      // 卖家使用专用接口
       const [statsData, ordersData] = await Promise.all([
         getSellerStats(),
         getSellerOrders({ page: 1, pageSize: 5 }),
@@ -262,7 +280,6 @@ const loadData = async () => {
       stats.value = statsData;
       recentOrders.value = ordersData.data;
     } else {
-      // 管理员/其他用户
       const [statsData, ordersData] = await Promise.all([
         getOrderStats(),
         getOrders({ page: 1, pageSize: 5 }),
@@ -282,98 +299,232 @@ const handleViewMore = () => {
   if (isSeller.value) return router.push("/seller/shipment");
   return router.push("/order/list");
 };
+
 const handleCreateOrder = () => router.push("/order/create");
 const handleMyOrders = () => router.push("/buyer/orders");
 const handleMyShipment = () => router.push("/seller/shipment");
 const handleTrack = () => router.push("/transport/track");
 
-onMounted(() => {
-  loadData();
-});
+onMounted(() => loadData());
 </script>
 
 <style scoped>
 .dashboard {
-  padding: 0;
-}
-.stats-row {
-  margin-bottom: 20px;
-}
-.stat-card {
-  cursor: pointer;
-  transition: all 0.3s;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--card-shadow);
-}
-.stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--card-shadow-hover);
-  border-color: var(--primary-light);
-}
-.stat-content {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 20px;
 }
+
+/* 欢迎横幅 */
+.welcome-banner {
+  background: var(--gradient-bg);
+  border-radius: var(--radius-xl);
+  padding: 24px 32px;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+
+.welcome-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.welcome-text h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.welcome-text p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.welcome-illustration {
+  width: 200px;
+  height: 120px;
+  opacity: 0.9;
+}
+
+.welcome-illustration svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* 统计卡片 */
+.stats-row {
+  margin-bottom: 0;
+}
+
+.stat-card {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  border: 1px solid var(--border-color);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-light);
+}
+
 .stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #ffffff;
 }
+
+.stat-icon.primary {
+  background: var(--gradient-primary);
+}
+.stat-icon.info {
+  background: linear-gradient(
+    135deg,
+    var(--info-color) 0%,
+    var(--info-light) 100%
+  );
+}
+.stat-icon.warning {
+  background: linear-gradient(
+    135deg,
+    var(--warning-color) 0%,
+    var(--warning-light) 100%
+  );
+}
+.stat-icon.success {
+  background: linear-gradient(
+    135deg,
+    var(--success-color) 0%,
+    var(--success-light) 100%
+  );
+}
+
 .stat-info {
   flex: 1;
 }
+
 .stat-value {
   font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 5px;
+  line-height: 1.2;
 }
+
 .stat-label {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-tertiary);
+  margin-top: 4px;
 }
+
+/* 内容卡片 */
 .content-row {
-  margin-top: 20px;
+  margin-top: 0;
 }
+
+.recent-orders-card,
+.quick-actions-card {
+  height: 100%;
+  border-radius: var(--radius-lg);
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
   color: var(--text-primary);
 }
+
+.header-icon {
+  color: var(--primary-color);
+}
+
+.order-no-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.orders-table {
+  --el-table-border-color: var(--border-color);
+}
+
+/* 快捷操作 */
 .quick-actions {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
 }
+
+.quick-actions .el-button + .el-button {
+  margin-left: 0;
+}
+
 .action-btn {
   width: 100%;
-  height: 50px;
-  font-size: 16px;
-  margin-left: 0 !important;
-  transition: all 0.3s;
-}
-.action-btn:hover {
-  transform: translateX(5px);
-}
-:deep(.el-card) {
+  height: 52px;
+  justify-content: flex-start;
+  padding: 0 20px !important;
   border: 1px solid var(--border-color);
-  box-shadow: var(--card-shadow);
-  transition: all 0.3s;
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all var(--transition-normal);
 }
-:deep(.el-card:hover) {
-  box-shadow: var(--card-shadow-hover);
+
+.action-btn .el-icon {
+  margin-right: 12px !important;
+  font-size: 18px;
 }
-:deep(.el-card__header) {
-  background: var(--border-color-light);
-  border-bottom: 1px solid var(--border-color);
+
+.action-btn .el-icon + span {
+  margin-left: 0 !important;
+}
+
+.action-btn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: rgba(14, 165, 233, 0.05);
+  transform: translateX(4px);
+}
+
+@media (max-width: 768px) {
+  .welcome-banner {
+    padding: 20px;
+  }
+
+  .welcome-illustration {
+    display: none;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
 }
 </style>

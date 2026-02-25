@@ -1,16 +1,23 @@
 <template>
   <div class="page-container">
-    <el-card v-if="showHeader" class="page-header" shadow="never">
+    <div v-if="showHeader" class="page-header">
       <div class="header-content">
         <div class="header-left">
-          <h3 class="page-title">{{ title }}</h3>
+          <h3 class="page-title">
+            <slot name="icon">
+              <el-icon v-if="icon" class="title-icon"
+                ><component :is="icon"
+              /></el-icon>
+            </slot>
+            {{ title }}
+          </h3>
           <p v-if="description" class="page-description">{{ description }}</p>
         </div>
         <div v-if="$slots.extra" class="header-right">
           <slot name="extra"></slot>
         </div>
       </div>
-    </el-card>
+    </div>
 
     <el-card class="page-content" :shadow="shadow">
       <slot></slot>
@@ -37,11 +44,10 @@ withDefaults(defineProps<PageContainerProps>(), {
 }
 
 .page-header {
-  margin-bottom: 0;
-}
-
-.page-header :deep(.el-card__body) {
-  padding: 12px 20px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  border: 1px solid var(--border-color);
 }
 
 .header-content {
@@ -56,15 +62,23 @@ withDefaults(defineProps<PageContainerProps>(), {
 
 .page-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-icon {
+  color: var(--primary-color);
+  font-size: 20px;
 }
 
 .page-description {
-  margin: 4px 0 0 0;
-  font-size: 12px;
-  color: #999;
+  margin: 6px 0 0 0;
+  font-size: 13px;
+  color: var(--text-tertiary);
 }
 
 .header-right {
@@ -74,5 +88,10 @@ withDefaults(defineProps<PageContainerProps>(), {
 
 .page-content {
   flex: 1;
+  border-radius: var(--radius-lg);
+}
+
+.page-content :deep(.el-card__body) {
+  padding: 20px;
 }
 </style>

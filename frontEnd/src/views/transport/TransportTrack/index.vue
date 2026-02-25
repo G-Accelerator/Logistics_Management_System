@@ -1,69 +1,72 @@
 <template>
-  <page-container title="物流追踪" description="实时查看物流运输轨迹">
+  <div class="track-page">
     <div class="track-container">
       <!-- 左侧：查询和轨迹信息 -->
       <div class="track-sidebar">
         <!-- 查询表单 -->
         <el-card class="search-card">
-          <el-form :model="searchForm" label-width="80px">
+          <div class="search-header">
+            <el-icon class="search-icon"><Search /></el-icon>
+            <span>物流查询</span>
+          </div>
+          <el-form :model="searchForm" label-position="top">
             <el-form-item label="查询方式">
-              <el-radio-group v-model="searchForm.queryType" size="small">
+              <el-radio-group v-model="searchForm.queryType" size="default">
                 <el-radio-button value="orderNo">订单号</el-radio-button>
                 <el-radio-button value="trackingNo">运单号</el-radio-button>
               </el-radio-group>
             </el-form-item>
             <el-form-item
-              label="订单号"
               v-if="searchForm.queryType === 'orderNo'"
+              label="订单号"
             >
               <el-input
                 v-model="searchForm.orderNo"
                 placeholder="请输入订单号"
                 clearable
+                size="large"
                 @keyup.enter="handleSearch"
               >
-                <template #append>
+                <template #suffix>
                   <el-button
                     :icon="DocumentCopy"
+                    link
                     @click="pasteOrderNo"
                     title="粘贴"
                   />
                 </template>
               </el-input>
             </el-form-item>
-            <el-form-item label="运单号" v-else>
+            <el-form-item v-else label="运单号">
               <el-input
                 v-model="searchForm.trackingNo"
                 placeholder="请输入运单号"
                 clearable
+                size="large"
                 @keyup.enter="handleSearch"
               >
-                <template #append>
+                <template #suffix>
                   <el-button
                     :icon="DocumentCopy"
+                    link
                     @click="pasteOrderNo"
                     title="粘贴"
                   />
                 </template>
               </el-input>
             </el-form-item>
-            <el-form-item>
+            <div class="search-actions">
               <el-button
                 type="primary"
+                size="large"
                 :loading="loading"
                 @click="handleSearch"
+                class="search-btn"
               >
-                查询轨迹
+                <el-icon><Search /></el-icon>查询轨迹
               </el-button>
-              <el-button
-                :loading="loading"
-                :disabled="!trackInfo"
-                @click="handleRefresh"
-              >
-                刷新
-              </el-button>
-              <el-button @click="handleReset">重置</el-button>
-            </el-form-item>
+              <el-button size="large" @click="handleReset">重置</el-button>
+            </div>
           </el-form>
         </el-card>
 
@@ -71,40 +74,61 @@
         <el-card v-if="trackInfo" class="info-card">
           <template #header>
             <div class="card-header">
-              <span>物流信息</span>
-              <el-tag :type="getStatusType(trackInfo.status)">
+              <div class="header-left">
+                <el-icon class="header-icon"><Van /></el-icon>
+                <span>物流信息</span>
+              </div>
+              <el-tag :type="getStatusType(trackInfo.status)" effect="light">
                 {{ trackInfo.statusText }}
               </el-tag>
             </div>
           </template>
-          <el-descriptions :column="1" size="small">
-            <el-descriptions-item label="运单号">
-              {{ trackInfo.trackingNo }}
-            </el-descriptions-item>
-            <el-descriptions-item label="快递公司">
-              {{ trackInfo.expressCompanyName || "-" }}
-            </el-descriptions-item>
-            <el-descriptions-item label="发货地">
-              {{ trackInfo.origin }}
-            </el-descriptions-item>
-            <el-descriptions-item label="目的地">
-              {{ trackInfo.destination }}
-            </el-descriptions-item>
-            <el-descriptions-item label="发货时间">
-              {{ trackInfo.sendTime || "-" }}
-            </el-descriptions-item>
-            <el-descriptions-item label="预计送达">
-              {{ trackInfo.estimatedTime || "-" }}
-            </el-descriptions-item>
-          </el-descriptions>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">运单号</span>
+              <span class="info-value">{{ trackInfo.trackingNo }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">快递公司</span>
+              <span class="info-value">{{
+                trackInfo.expressCompanyName || "-"
+              }}</span>
+            </div>
+            <div class="info-item full">
+              <span class="info-label">发货地</span>
+              <span class="info-value">{{ trackInfo.origin }}</span>
+            </div>
+            <div class="info-item full">
+              <span class="info-label">目的地</span>
+              <span class="info-value">{{ trackInfo.destination }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">发货时间</span>
+              <span class="info-value">{{ trackInfo.sendTime || "-" }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">预计送达</span>
+              <span class="info-value highlight">{{
+                trackInfo.estimatedTime || "-"
+              }}</span>
+            </div>
+          </div>
         </el-card>
 
         <!-- 轨迹时间线 -->
         <el-card v-if="trackPoints.length > 0" class="timeline-card">
           <template #header>
-            <span>物流轨迹</span>
+            <div class="card-header">
+              <div class="header-left">
+                <el-icon class="header-icon"><Clock /></el-icon>
+                <span>物流轨迹</span>
+              </div>
+              <span class="track-count"
+                >共 {{ trackPoints.length }} 条记录</span
+              >
+            </div>
           </template>
-          <el-scrollbar max-height="300px">
+          <el-scrollbar class="timeline-scrollbar">
             <el-timeline>
               <el-timeline-item
                 v-for="(point, index) in trackPoints"
@@ -115,8 +139,10 @@
                 placement="top"
               >
                 <div class="timeline-content">
-                  <div class="timeline-title">{{ point.status }}</div>
-                  <div class="timeline-desc">{{ point.location }}</div>
+                  <div class="timeline-status" :class="{ active: index === 0 }">
+                    {{ point.status }}
+                  </div>
+                  <div class="timeline-location">{{ point.location }}</div>
                 </div>
               </el-timeline-item>
             </el-timeline>
@@ -127,7 +153,6 @@
       <!-- 右侧：地图 -->
       <div class="track-map">
         <div id="amap-container" class="map-container"></div>
-        <!-- 地图控制按钮 -->
         <div class="map-controls">
           <el-button-group>
             <el-button :icon="ZoomIn" @click="handleZoomIn" />
@@ -135,29 +160,37 @@
             <el-button :icon="Aim" @click="handleFitView" />
           </el-button-group>
         </div>
+        <div v-if="!trackInfo" class="map-placeholder">
+          <el-icon class="placeholder-icon"><Location /></el-icon>
+          <p>输入订单号或运单号查询物流轨迹</p>
+        </div>
       </div>
     </div>
-  </page-container>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, onActivated } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
-import { ZoomIn, ZoomOut, Aim, DocumentCopy } from "@element-plus/icons-vue";
-import PageContainer from "../../../components/layout/PageContainer/index.vue";
+import {
+  ZoomIn,
+  ZoomOut,
+  Aim,
+  DocumentCopy,
+  Search,
+  Van,
+  Clock,
+  Location,
+} from "@element-plus/icons-vue";
 import { getOrder, getTrackPoints, getStationStatus } from "../../../api/order";
 import type { TrackInfo, TrackPoint } from "./types";
 import type { StationInfo } from "../../../api/order/types";
 
-// 组件名称，用于 keep-alive 缓存
 defineOptions({ name: "TransportTrack" });
-
-export type { TrackInfo, TrackPoint } from "./types";
 
 const route = useRoute();
 
-// 状态
 const loading = ref(false);
 const searchForm = reactive({
   orderNo: "",
@@ -167,17 +200,13 @@ const searchForm = reactive({
 const trackInfo = ref<TrackInfo | null>(null);
 const trackPoints = ref<TrackPoint[]>([]);
 
-// 地图相关
 let map: any = null;
 let passedPolyline: any = null;
 let pendingPolyline: any = null;
 let markers: any[] = [];
 let currentMarker: any = null;
-
-// 地图是否已初始化
 const mapReady = ref(false);
 
-// 检查路由参数并搜索
 const checkRouteAndSearch = () => {
   const orderNo = route.query.orderNo;
   const trackingNo = route.query.trackingNo;
@@ -196,7 +225,6 @@ const checkRouteAndSearch = () => {
   }
 };
 
-// 状态类型映射
 const getStatusType = (status: string) => {
   const map: Record<string, any> = {
     pending: "warning",
@@ -207,7 +235,6 @@ const getStatusType = (status: string) => {
   return map[status] || "info";
 };
 
-// 粘贴订单号
 const pasteOrderNo = async () => {
   try {
     const text = await navigator.clipboard.readText();
@@ -224,18 +251,6 @@ const pasteOrderNo = async () => {
   }
 };
 
-// 刷新当前查询
-const handleRefresh = () => {
-  const queryValue =
-    searchForm.queryType === "orderNo"
-      ? searchForm.orderNo
-      : searchForm.trackingNo;
-  if (queryValue) {
-    handleSearch();
-  }
-};
-
-// 状态文本映射
 const getStatusText = (status: string) => {
   const map: Record<string, string> = {
     pending: "待发货",
@@ -246,11 +261,9 @@ const getStatusText = (status: string) => {
   return map[status] || status;
 };
 
-// 初始化地图
 const initMap = () => {
   if (typeof AMap === "undefined") {
-    ElMessage.warning("高德地图 API 未加载，请配置 API Key");
-    console.error("请在 index.html 中配置高德地图 API Key");
+    ElMessage.warning("高德地图 API 未加载");
     return;
   }
 
@@ -261,34 +274,29 @@ const initMap = () => {
     mapStyle: "amap://styles/normal",
   });
 
-  // 加载比例尺插件（高德地图 2.0 需要通过插件方式加载）
   AMap.plugin(["AMap.Scale"], () => {
     map.addControl(new AMap.Scale());
   });
 
-  // 地图初始化完成后标记为就绪，并检查路由参数
   map.on("complete", () => {
     mapReady.value = true;
     checkRouteAndSearch();
   });
 };
 
-// 绘制轨迹
 const drawTrack = (points: TrackPoint[]) => {
   if (!map || points.length === 0) return;
-
   clearTrack();
 
   const passedPoints = points.filter((p) => p.passed);
   const pendingPoints = points.filter((p) => !p.passed);
   const currentPoint = points.find((p) => p.isCurrent);
 
-  // 绘制已通过的路线（实线）
   if (passedPoints.length > 1) {
     const passedPath = passedPoints.map((p) => [p.lng, p.lat]);
     passedPolyline = new AMap.Polyline({
       path: passedPath,
-      strokeColor: "#6366f1",
+      strokeColor: "#0ea5e9",
       strokeWeight: 4,
       strokeOpacity: 1,
       lineJoin: "round",
@@ -297,30 +305,26 @@ const drawTrack = (points: TrackPoint[]) => {
     map.add(passedPolyline);
   }
 
-  // 绘制待通过的路线（虚线）
   if (pendingPoints.length > 0) {
     let pendingPath: number[][];
     if (currentPoint) {
-      // 有当前点，从当前点开始
       pendingPath = [
         [currentPoint.lng, currentPoint.lat],
         ...pendingPoints.map((p) => [p.lng, p.lat]),
       ];
     } else if (passedPoints.length > 0) {
-      // 没有当前点但有已通过的点，从最后一个已通过点开始
       const lastPassed = passedPoints[passedPoints.length - 1]!;
       pendingPath = [
         [lastPassed.lng, lastPassed.lat],
         ...pendingPoints.map((p) => [p.lng, p.lat]),
       ];
     } else {
-      // 全部都是待通过（未发货状态），显示完整路线
       pendingPath = pendingPoints.map((p) => [p.lng, p.lat]);
     }
 
     pendingPolyline = new AMap.Polyline({
       path: pendingPath,
-      strokeColor: "#9ca3af",
+      strokeColor: "#94a3b8",
       strokeWeight: 3,
       strokeOpacity: 0.6,
       strokeStyle: "dashed",
@@ -339,14 +343,7 @@ const drawTrack = (points: TrackPoint[]) => {
     if (isCurrent) {
       currentMarker = new AMap.Marker({
         position: [point.lng, point.lat],
-        content: `<div style="
-          width: 18px; height: 18px;
-          background: #6366f1;
-          border: 3px solid #fff;
-          border-radius: 50%;
-          box-shadow: 0 2px 8px rgba(99,102,241,0.5);
-          animation: pulse 1.5s infinite;
-        "></div>`,
+        content: `<div style="width:18px;height:18px;background:#0ea5e9;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(14,165,233,0.5);animation:pulse 1.5s infinite;"></div>`,
         offset: new AMap.Pixel(-9, -9),
       });
       map.add(currentMarker);
@@ -354,13 +351,8 @@ const drawTrack = (points: TrackPoint[]) => {
 
       const label = new AMap.Marker({
         position: [point.lng, point.lat],
-        content: `<div style="
-          background: #6366f1; color: #fff;
-          padding: 3px 8px; border-radius: 4px;
-          font-size: 11px; white-space: nowrap;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        ">当前: ${point.location}</div>`,
-        offset: new AMap.Pixel(-60, -35),
+        content: `<div style="background:#0ea5e9;color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);">当前: ${point.location}</div>`,
+        offset: new AMap.Pixel(-60, -38),
       });
       map.add(label);
       markers.push(label);
@@ -368,13 +360,7 @@ const drawTrack = (points: TrackPoint[]) => {
       const color = isStart ? "#10b981" : "#f59e0b";
       const marker = new AMap.Marker({
         position: [point.lng, point.lat],
-        content: `<div style="
-          width: 14px; height: 14px;
-          background: ${color};
-          border: 2px solid #fff;
-          border-radius: 50%;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-        "></div>`,
+        content: `<div style="width:14px;height:14px;background:${color};border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.2);"></div>`,
         offset: new AMap.Pixel(-7, -7),
       });
       map.add(marker);
@@ -383,31 +369,19 @@ const drawTrack = (points: TrackPoint[]) => {
       const labelPrefix = isStart ? "发货: " : "收货: ";
       const extraInfo =
         isEnd && point.estimatedTime
-          ? `<br/><span style="font-size:9px;">预计${point.estimatedTime}</span>`
+          ? `<br/><span style="font-size:10px;opacity:0.8;">预计${point.estimatedTime}</span>`
           : "";
       const labelMarker = new AMap.Marker({
         position: [point.lng, point.lat],
-        content: `<div style="
-          background: ${color}; color: #fff;
-          padding: 4px 8px; border-radius: 4px;
-          font-size: 11px; white-space: nowrap;
-          text-align: center; line-height: 1.4;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-        ">${labelPrefix}${point.location}${extraInfo}</div>`,
-        offset: new AMap.Pixel(-50, -38),
+        content: `<div style="background:${color};color:#fff;padding:5px 10px;border-radius:6px;font-size:12px;white-space:nowrap;text-align:center;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,0.15);">${labelPrefix}${point.location}${extraInfo}</div>`,
+        offset: new AMap.Pixel(-50, -42),
       });
       map.add(labelMarker);
       markers.push(labelMarker);
     } else {
       const marker = new AMap.Marker({
         position: [point.lng, point.lat],
-        content: `<div style="
-          width: 8px; height: 8px;
-          background: ${isPassed ? "#6366f1" : "#d1d5db"};
-          border: 2px solid #fff;
-          border-radius: 50%;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        "></div>`,
+        content: `<div style="width:8px;height:8px;background:${isPassed ? "#0ea5e9" : "#cbd5e1"};border:2px solid #fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>`,
         offset: new AMap.Pixel(-4, -4),
       });
       map.add(marker);
@@ -415,11 +389,7 @@ const drawTrack = (points: TrackPoint[]) => {
 
       marker.on("click", () => {
         const infoWindow = new AMap.InfoWindow({
-          content: `<div style="padding: 6px; font-size: 12px;">
-            <div style="font-weight: 500; color: ${isPassed ? "#6366f1" : "#9ca3af"}">${point.status}</div>
-            <div style="color: #666;">${point.location}</div>
-            <div style="color: #999; font-size: 11px;">${point.time || "待到达"}</div>
-          </div>`,
+          content: `<div style="padding:8px;font-size:12px;"><div style="font-weight:500;color:${isPassed ? "#0ea5e9" : "#94a3b8"};">${point.status}</div><div style="color:#64748b;margin-top:4px;">${point.location}</div><div style="color:#94a3b8;font-size:11px;margin-top:2px;">${point.time || "待到达"}</div></div>`,
           offset: new AMap.Pixel(0, -5),
         });
         infoWindow.open(map, marker.getPosition());
@@ -430,7 +400,6 @@ const drawTrack = (points: TrackPoint[]) => {
   map.setFitView(null, false, [50, 50, 50, 50]);
 };
 
-// 清除轨迹
 const clearTrack = () => {
   if (passedPolyline) {
     map.remove(passedPolyline);
@@ -450,7 +419,6 @@ const clearTrack = () => {
   }
 };
 
-// 查询轨迹
 const handleSearch = async () => {
   const queryValue =
     searchForm.queryType === "orderNo"
@@ -465,7 +433,6 @@ const handleSearch = async () => {
 
   loading.value = true;
   try {
-    // 根据查询类型获取订单信息
     const order = await getOrder(queryValue, searchForm.queryType);
     if (!order) {
       ElMessage.warning("未找到该订单");
@@ -478,12 +445,10 @@ const handleSearch = async () => {
       ? new Date(order.createTime.replace(" ", "T"))
       : new Date();
 
-    // 根据订单状态计算预计送达时间
     const formatDateTime = (d: Date) => {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     };
 
-    // 待发货状态没有发货时间，预计送达也无法计算
     const hasSent = orderStatus !== "pending";
     const sendTime = hasSent ? createTime : null;
     const estimatedArrival =
@@ -502,19 +467,15 @@ const handleSearch = async () => {
       estimatedTime: estimatedArrival ? formatDateTime(estimatedArrival) : "",
     };
 
-    // 获取站点实际状态（使用订单号）
     const orderNo = order.orderNo || queryValue;
     let stationStatusList: StationInfo[] = [];
     try {
       stationStatusList = await getStationStatus(orderNo);
     } catch {
-      // 如果获取站点状态失败，回退到获取轨迹点
       console.warn("获取站点状态失败，使用轨迹点数据");
     }
 
-    // 如果有站点状态数据，使用实际状态
     if (stationStatusList.length > 0) {
-      // 找到最后一个已到达的站点索引
       let lastArrivedIndex = -1;
       for (let i = 0; i < stationStatusList.length; i++) {
         const station = stationStatusList[i];
@@ -523,24 +484,17 @@ const handleSearch = async () => {
         }
       }
 
-      // 转换为地图需要的格式，使用实际站点状态
       const allPoints: TrackPoint[] = stationStatusList.map((station, idx) => {
         const isStart = idx === 0;
         const isEnd = idx === stationStatusList.length - 1;
         const passed = station.status === "arrived";
-        // 当前位置是最后一个已到达的站点（且不是终点已到达）
         const isCurrent = idx === lastArrivedIndex && !isEnd;
 
         let status: string;
-        if (isStart) {
-          status = passed ? "已发货" : "待发货";
-        } else if (isEnd) {
-          status = passed ? "已送达" : "待到达";
-        } else {
-          status = passed ? "已到达" : "待到达";
-        }
+        if (isStart) status = passed ? "已发货" : "待发货";
+        else if (isEnd) status = passed ? "已送达" : "待到达";
+        else status = passed ? "已到达" : "待到达";
 
-        // 计算预计到达时间（用于未到达的终点显示）
         const stationProgress = idx / (stationStatusList.length - 1);
         const stationTime =
           sendTime && duration > 0
@@ -568,9 +522,7 @@ const handleSearch = async () => {
       return;
     }
 
-    // 回退逻辑：如果没有站点状态数据，使用原有的轨迹点计算逻辑
     const points = await getTrackPoints(orderNo);
-
     if (points.length === 0) {
       ElMessage.warning("该订单暂无轨迹数据");
       trackPoints.value = [];
@@ -578,19 +530,14 @@ const handleSearch = async () => {
       return;
     }
 
-    // 根据订单状态决定物流进度（回退逻辑）
     let progress = 0;
-    if (orderStatus === "pending") {
-      progress = -1;
-    } else if (orderStatus === "completed") {
-      progress = 1;
-    } else if (orderStatus === "shipping" && sendTime && duration > 0) {
+    if (orderStatus === "pending") progress = -1;
+    else if (orderStatus === "completed") progress = 1;
+    else if (orderStatus === "shipping" && sendTime && duration > 0) {
       const now = new Date();
       const elapsed = now.getTime() - sendTime.getTime();
       progress = Math.min(elapsed / (duration * 1000), 0.99);
-    } else if (orderStatus === "cancelled") {
-      progress = -1;
-    }
+    } else if (orderStatus === "cancelled") progress = -1;
 
     const currentIdx =
       progress >= 0 ? Math.floor(progress * (points.length - 1)) : -1;
@@ -598,25 +545,19 @@ const handleSearch = async () => {
     const allPoints: TrackPoint[] = points.map((pt, idx) => {
       const isStart = idx === 0;
       const isEnd = idx === points.length - 1;
-
       const stationProgress = idx / (points.length - 1);
       const stationTime =
         sendTime && duration > 0
           ? new Date(sendTime.getTime() + stationProgress * duration * 1000)
           : null;
       const stationTimeStr = stationTime ? formatDateTime(stationTime) : "";
-
       const passed = idx <= currentIdx;
       const isCurrent = idx === currentIdx && progress < 1;
 
       let status: string;
-      if (isStart) {
-        status = passed ? "已发货" : "待发货";
-      } else if (isEnd) {
-        status = passed ? "已送达" : "待到达";
-      } else {
-        status = passed ? "已到达" : "待到达";
-      }
+      if (isStart) status = passed ? "已发货" : "待发货";
+      else if (isEnd) status = passed ? "已送达" : "待到达";
+      else status = passed ? "已到达" : "待到达";
 
       return {
         time: passed ? stationTimeStr : "",
@@ -637,17 +578,13 @@ const handleSearch = async () => {
     drawTrack(allPoints);
     ElMessage.success("查询成功");
   } catch (error: any) {
-    if (error?.response?.status === 404) {
-      ElMessage.warning("未找到该订单");
-    } else {
-      ElMessage.error("查询失败");
-    }
+    if (error?.response?.status === 404) ElMessage.warning("未找到该订单");
+    else ElMessage.error("查询失败");
   } finally {
     loading.value = false;
   }
 };
 
-// 重置
 const handleReset = () => {
   searchForm.orderNo = "";
   searchForm.trackingNo = "";
@@ -655,33 +592,22 @@ const handleReset = () => {
   trackInfo.value = null;
   trackPoints.value = [];
   clearTrack();
-  if (map) {
-    map.setZoomAndCenter(5, [116.397428, 39.90923]);
-  }
+  if (map) map.setZoomAndCenter(5, [108.5, 34.5]);
 };
 
-// 地图控制
 const handleZoomIn = () => map?.zoomIn();
 const handleZoomOut = () => map?.zoomOut();
 const handleFitView = () => map?.setFitView();
 
-// 生命周期
 onMounted(() => {
-  // 初始化地图插件
   (AMap as any).plugin(
     ["AMap.Geocoder", "AMap.AutoComplete", "AMap.Geolocation"],
     () => {},
   );
-
-  setTimeout(() => {
-    initMap();
-  }, 100);
+  setTimeout(() => initMap(), 100);
 });
 
-// keep-alive 激活时检查路由参数（从其他页面返回时）
-onActivated(() => {
-  checkRouteAndSearch();
-});
+onActivated(() => checkRouteAndSearch());
 
 onUnmounted(() => {
   if (map) {
@@ -692,46 +618,212 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.track-container {
-  display: flex;
-  gap: 20px;
-  height: calc(100vh - 220px);
+.track-page {
+  height: calc(100vh - 148px);
   min-height: 500px;
 }
 
+.track-container {
+  display: flex;
+  gap: 20px;
+  height: 100%;
+}
+
 .track-sidebar {
-  width: 360px;
+  width: 380px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   overflow: hidden;
 }
 
-.search-card,
-.info-card {
+/* 查询卡片 - 紧凑样式 */
+.search-card {
   flex-shrink: 0;
+  border-radius: var(--radius-lg);
 }
 
+.search-card :deep(.el-card__body) {
+  padding: 16px;
+}
+
+.search-card :deep(.el-form-item) {
+  margin-bottom: 12px;
+}
+
+.search-card :deep(.el-form-item__label) {
+  padding-bottom: 4px;
+  font-size: 13px;
+}
+
+/* 物流信息卡片 - 紧凑样式 */
+.info-card {
+  flex-shrink: 0;
+  border-radius: var(--radius-lg);
+}
+
+.info-card :deep(.el-card__header) {
+  padding: 10px 16px;
+  background: linear-gradient(
+    180deg,
+    var(--bg-secondary) 0%,
+    var(--bg-primary) 100%
+  );
+  border-bottom: 1px solid var(--border-color);
+}
+
+.info-card :deep(.el-card__body) {
+  padding: 12px 16px;
+}
+
+/* 轨迹卡片 - 占据剩余空间 */
 .timeline-card {
   flex: 1;
-  min-height: 0;
+  min-height: 180px;
   display: flex;
   flex-direction: column;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.timeline-card :deep(.el-card__header) {
+  padding: 10px 16px;
+  background: linear-gradient(
+    180deg,
+    var(--bg-secondary) 0%,
+    var(--bg-primary) 100%
+  );
+  border-bottom: 1px solid var(--border-color);
 }
 
 .timeline-card :deep(.el-card__body) {
   flex: 1;
-  padding: 16px;
+  padding: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
+.timeline-scrollbar {
+  flex: 1;
+  padding: 12px 16px;
+}
+
+.track-count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+/* 查询表单头部 */
+.search-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.search-icon {
+  color: var(--primary-color);
+  font-size: 18px;
+}
+
+.search-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.search-btn {
+  flex: 1;
+}
+
+/* 卡片头部通用样式 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.header-icon {
+  color: var(--primary-color);
+  font-size: 16px;
+}
+
+/* 物流信息网格 - 更紧凑 */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-item.full {
+  grid-column: 1 / -1;
+}
+
+.info-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.info-value {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.info-value.highlight {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+/* 时间线内容 */
+.timeline-content {
+  line-height: 1.4;
+}
+
+.timeline-status {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.timeline-status.active {
+  color: var(--primary-color);
+}
+
+.timeline-location {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* 地图区域 */
 .track-map {
   flex: 1;
   position: relative;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
+  background: var(--bg-secondary);
 }
 
 .map-container {
@@ -746,43 +838,49 @@ onUnmounted(() => {
   z-index: 100;
 }
 
-.search-card :deep(.el-card__body) {
-  padding-bottom: 0;
+.map-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--text-tertiary);
 }
 
-.info-card .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.placeholder-icon {
+  font-size: 64px;
+  color: var(--border-color);
+  margin-bottom: 16px;
 }
 
-.timeline-content {
-  line-height: 1.5;
-}
-
-.timeline-title {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.timeline-desc {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-:deep(.el-timeline-item__timestamp) {
-  font-size: 12px;
+.map-placeholder p {
+  margin: 0;
+  font-size: 14px;
 }
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.5);
   }
   70% {
-    box-shadow: 0 0 0 15px rgba(99, 102, 241, 0);
+    box-shadow: 0 0 0 15px rgba(14, 165, 233, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+  }
+}
+
+@media (max-width: 1024px) {
+  .track-container {
+    flex-direction: column;
+  }
+
+  .track-sidebar {
+    width: 100%;
+  }
+
+  .track-map {
+    min-height: 400px;
   }
 }
 </style>

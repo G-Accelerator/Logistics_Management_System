@@ -1,5 +1,6 @@
 <template>
   <page-container title="我的订单" description="查看订单状态，确认收货">
+    <template #icon><Document /></template>
     <data-table
       ref="tableRef"
       :search-config="searchConfig"
@@ -11,7 +12,7 @@
     >
       <template #operation="{ row }">
         <el-button type="primary" link @click="handleViewTrack(row)">
-          查看物流
+          <el-icon><Location /></el-icon>查看物流
         </el-button>
         <el-button
           v-if="row.status === 'shipping'"
@@ -19,7 +20,7 @@
           link
           @click="handleReceive(row)"
         >
-          确认收货
+          <el-icon><Check /></el-icon>确认收货
         </el-button>
       </template>
     </data-table>
@@ -30,7 +31,12 @@
 import { h, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
-import { DocumentCopy } from "@element-plus/icons-vue";
+import {
+  DocumentCopy,
+  Document,
+  Location,
+  Check,
+} from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
 import { getBuyerOrders, receiveOrder } from "../../../api/order";
@@ -38,7 +44,6 @@ import { getBuyerOrders, receiveOrder } from "../../../api/order";
 const router = useRouter();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
 
-// 状态选项
 const statusOptions = [
   { label: "全部", value: "" },
   { label: "待发货", value: "pending" },
@@ -47,7 +52,6 @@ const statusOptions = [
   { label: "已取消", value: "cancelled" },
 ];
 
-// 搜索配置
 const searchConfig = [
   {
     prop: "orderNo",
@@ -70,7 +74,6 @@ const searchConfig = [
   },
 ];
 
-// 状态标签类型映射
 const statusTagType: Record<
   string,
   "warning" | "primary" | "success" | "info"
@@ -81,7 +84,6 @@ const statusTagType: Record<
   cancelled: "info",
 };
 
-// 状态文本映射
 const statusTextMap: Record<string, string> = {
   pending: "待发货",
   shipping: "运输中",
@@ -89,7 +91,6 @@ const statusTextMap: Record<string, string> = {
   cancelled: "已取消",
 };
 
-// 复制订单号
 const copy = async (orderNo: string) => {
   try {
     await navigator.clipboard.writeText(orderNo);
@@ -99,7 +100,6 @@ const copy = async (orderNo: string) => {
   }
 };
 
-// 表格列配置
 const columns = [
   {
     prop: "orderNo",
@@ -136,9 +136,8 @@ const columns = [
     width: 180,
     showOverflowTooltip: true,
     render: (row: any) => {
-      if (!row.trackingNo) {
-        return <span style="color: #999;">-</span>;
-      }
+      if (!row.trackingNo)
+        return <span style="color: var(--text-tertiary);">-</span>;
       return (
         <div style="display: flex; align-items: center; gap: 4px;">
           <span style="overflow: hidden; text-overflow: ellipsis;">
@@ -158,7 +157,6 @@ const columns = [
     },
   },
   { prop: "cargoName", label: "货物名称", minWidth: 120 },
-
   { prop: "senderName", label: "发货人", width: 100 },
   {
     prop: "origin",
@@ -174,22 +172,21 @@ const columns = [
     render: (row: any) =>
       h(
         ElTag,
-        { type: statusTagType[row.status] || "info", size: "small" },
+        {
+          type: statusTagType[row.status] || "info",
+          size: "small",
+          effect: "light",
+        },
         () => statusTextMap[row.status] || row.status,
       ),
   },
   { prop: "createTime", label: "创建时间", width: 160 },
 ];
 
-// 查看物流
 const handleViewTrack = (row: any) => {
-  router.push({
-    path: "/transport/track",
-    query: { orderNo: row.orderNo },
-  });
+  router.push({ path: "/transport/track", query: { orderNo: row.orderNo } });
 };
 
-// 确认收货
 const handleReceive = async (row: any) => {
   try {
     await ElMessageBox.confirm(
@@ -201,13 +198,10 @@ const handleReceive = async (row: any) => {
     ElMessage.success("收货成功");
     tableRef.value?.refresh();
   } catch (error: any) {
-    if (error !== "cancel") {
-      ElMessage.error(error?.message || "收货失败");
-    }
+    if (error !== "cancel") ElMessage.error(error?.message || "收货失败");
   }
 };
 
-// 从后端API加载数据（买家专用接口，自动根据token过滤）
 const loadData = async (params: any) => {
   try {
     const result = await getBuyerOrders({
@@ -218,14 +212,11 @@ const loadData = async (params: any) => {
       cargoName: params.cargoName,
     });
     return { data: result.data, total: result.total };
-  } catch (error) {
+  } catch {
     ElMessage.error("获取订单列表失败");
     return { data: [], total: 0 };
   }
 };
 
-// 初始化快递公司数据
-onMounted(() => {
-  // 数据由 ExpressCompanySelect 组件自动加载
-});
+onMounted(() => {});
 </script>
