@@ -1,6 +1,5 @@
 <template>
   <page-container title="我的发货" description="管理待发货订单，确认发货">
-    <template #icon><Van /></template>
     <data-table
       ref="tableRef"
       :search-config="searchConfig"

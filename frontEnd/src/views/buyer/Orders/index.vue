@@ -1,6 +1,5 @@
 <template>
   <page-container title="我的订单" description="查看订单状态，确认收货">
-    <template #icon><Document /></template>
     <data-table
       ref="tableRef"
       :search-config="searchConfig"

@@ -7,7 +7,7 @@
           <h2>
             {{ getGreeting() }}，{{ userStore.userInfo?.nickname || "用户" }}
           </h2>
-          <p>欢迎使用物流轨迹追踪系统，今天也是高效的一天</p>
+          <p>欢迎使用物流轨迹追踪系统</p>
         </div>
         <div class="welcome-illustration">
           <svg viewBox="0 0 200 120" fill="none">
@@ -492,11 +492,14 @@ onMounted(() => loadData());
   color: var(--text-primary);
   font-size: 14px;
   transition: all var(--transition-normal);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
 }
 
 .action-btn .el-icon {
   margin-right: 12px !important;
   font-size: 18px;
+  color: var(--primary-color);
 }
 
 .action-btn .el-icon + span {
@@ -508,6 +511,12 @@ onMounted(() => loadData());
   color: var(--primary-color);
   background: rgba(14, 165, 233, 0.05);
   transform: translateX(4px);
+  box-shadow: var(--shadow-md);
+}
+
+.action-btn:active {
+  transform: translateX(2px);
+  box-shadow: var(--shadow-sm);
 }
 
 @media (max-width: 768px) {
