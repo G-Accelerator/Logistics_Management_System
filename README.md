@@ -10,11 +10,11 @@
     <td><img src="showPhoto/管理员首页.png" alt="管理员首页" /></td>
   </tr>
   <tr>
-    <td><img src="showPhoto/物流追踪地图.png" alt="物流追踪地图" /></td>
+    <td><img src="showPhoto/快递公司管理.png" alt="快递公司管理" /></td>
     <td><img src="showPhoto/统计报表.png" alt="统计报表" /></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="showPhoto/快递公司管理.png" alt="快递公司管理" /></td>
+    <td colspan="2"><img src="showPhoto/物流追踪地图.png" alt="物流追踪地图" /></td>
   </tr>
 </table>
 
