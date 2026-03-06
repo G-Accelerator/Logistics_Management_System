@@ -27,8 +27,25 @@ public class AuthService {
     private static final Map<String, User> TOKEN_STORE = new HashMap<>();
     // 买家手机号与用户映射
     private static final Map<String, User> PHONE_USERS = new HashMap<>();
-    // 验证码存储 (手机号 -> 验证码)
-    private static final ConcurrentHashMap<String, String> VERIFY_CODES = new ConcurrentHashMap<>();
+    // 验证码存储 (手机号 -> 验证码信息)
+    private static final ConcurrentHashMap<String, VerifyCodeInfo> VERIFY_CODES = new ConcurrentHashMap<>();
+    // 验证码有效期（毫秒）
+    private static final long CODE_EXPIRE_TIME =  20 * 1000; // 1分钟
+
+    // 验证码信息类
+    private static class VerifyCodeInfo {
+        String code;
+        long createTime;
+
+        VerifyCodeInfo(String code) {
+            this.code = code;
+            this.createTime = System.currentTimeMillis();
+        }
+
+        boolean isExpired() {
+            return System.currentTimeMillis() - createTime > CODE_EXPIRE_TIME;
+        }
+    }
 
     static {
         // 初始化默认用户
@@ -46,11 +63,11 @@ public class AuthService {
         
         // 生成6位验证码
         String code = String.format("%06d", new Random().nextInt(1000000));
-        VERIFY_CODES.put(phone, code);
+        VERIFY_CODES.put(phone, new VerifyCodeInfo(code));
         
         // 打印验证码到控制台
         log.info("========================================");
-        log.info("手机号 {} 的验证码: {}", phone, code);
+        log.info("手机号 {} 的验证码: {}（2分钟内有效）", phone, code);
         log.info("========================================");
     }
 
@@ -58,10 +75,13 @@ public class AuthService {
      * 验证验证码
      */
     private boolean verifyCode(String phone, String code) {
-        String storedCode = VERIFY_CODES.get(phone);
-        if (storedCode != null && storedCode.equals(code)) {
+        VerifyCodeInfo info = VERIFY_CODES.get(phone);
+        if (info != null && !info.isExpired() && info.code.equals(code)) {
             VERIFY_CODES.remove(phone); // 验证成功后删除
             return true;
+        }
+        if (info != null && info.isExpired()) {
+            VERIFY_CODES.remove(phone); // 清理过期验证码
         }
         return false;
     }
