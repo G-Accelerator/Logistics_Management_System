@@ -32,6 +32,19 @@ export const constantRoutes: AppRouteRecordRaw[] = [
       },
     ],
   },
+  {
+    path: "/profile",
+    component: () => import("../../layouts/MainLayout.vue"),
+    meta: { title: "个人中心", hidden: true },
+    children: [
+      {
+        path: "",
+        name: "Profile",
+        component: () => import("../../views/profile/index.vue"),
+        meta: { title: "个人中心" },
+      },
+    ],
+  },
 ];
 
 // 动态路由（根据角色过滤）
@@ -112,6 +125,20 @@ export const asyncRoutes: AppRouteRecordRaw[] = [
         component: () =>
           import("../../views/transport/TransportTrack/index.vue"),
         meta: { title: "物流跟踪", icon: "Location" },
+      },
+      {
+        path: "/transport/vehicle-monitor",
+        name: "VehicleMonitor",
+        component: () =>
+          import("../../views/transport/VehicleMonitor/index.vue"),
+        meta: { title: "车辆监控", icon: "Odometer", roles: ["admin"] },
+      },
+      {
+        path: "/transport/message-log",
+        name: "SmsMessageLog",
+        component: () =>
+          import("../../views/transport/SmsMessageLog/index.vue"),
+        meta: { title: "消息记录", icon: "ChatDotRound", roles: ["admin"] },
       },
     ],
   },

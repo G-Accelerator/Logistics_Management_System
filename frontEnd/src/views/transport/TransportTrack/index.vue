@@ -70,6 +70,11 @@
           </el-form>
         </el-card>
 
+        <el-scrollbar
+          v-if="trackInfo || trackPoints.length > 0"
+          class="sidebar-body-scroll"
+        >
+          <div class="sidebar-scroll-inner">
         <!-- 物流信息 -->
         <el-card v-if="trackInfo" class="info-card">
           <template #header>
@@ -115,6 +120,54 @@
           </div>
         </el-card>
 
+        <el-card
+          v-if="trackInfo && trackInfo.vehiclePlateNumber"
+          class="vehicle-card"
+        >
+          <template #header>
+            <div class="card-header">
+              <div class="header-left">
+                <el-icon class="header-icon"><Van /></el-icon>
+                <span>承运车辆</span>
+              </div>
+              <el-tag
+                :type="trackInfo.vehicleOnline ? 'success' : 'danger'"
+                size="small"
+              >
+                {{ trackInfo.vehicleOnline ? "在线" : "离线" }}
+              </el-tag>
+            </div>
+          </template>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">车牌</span>
+              <span class="info-value">{{ trackInfo.vehiclePlateNumber }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">类型</span>
+              <span class="info-value">{{ trackInfo.vehicleType || "-" }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">驾驶员</span>
+              <span class="info-value">{{
+                trackInfo.vehicleDriverName || "-"
+              }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">电话</span>
+              <span class="info-value">{{
+                trackInfo.vehicleDriverPhone || "-"
+              }}</span>
+            </div>
+            <div class="info-item full">
+              <span class="info-label">当前车速</span>
+              <span class="info-value highlight"
+                >{{ trackInfo.currentSpeedKmh ?? "-" }} km/h</span
+              >
+            </div>
+          </div>
+        </el-card>
+
         <!-- 轨迹时间线 -->
         <el-card v-if="trackPoints.length > 0" class="timeline-card">
           <template #header>
@@ -128,7 +181,7 @@
               >
             </div>
           </template>
-          <el-scrollbar class="timeline-scrollbar">
+          <div class="timeline-inner">
             <el-timeline>
               <el-timeline-item
                 v-for="(point, index) in trackPoints"
@@ -143,11 +196,23 @@
                     {{ point.status }}
                   </div>
                   <div class="timeline-location">{{ point.location }}</div>
+                  <div
+                    v-if="
+                      trackInfo?.vehiclePlateNumber &&
+                      trackInfo.currentSpeedKmh != null
+                    "
+                    class="timeline-vehicle-speed"
+                  >
+                    车速 {{ trackInfo.currentSpeedKmh }} km/h ·
+                    {{ trackInfo.vehiclePlateNumber }}
+                  </div>
                 </div>
               </el-timeline-item>
             </el-timeline>
-          </el-scrollbar>
+          </div>
         </el-card>
+          </div>
+        </el-scrollbar>
       </div>
 
       <!-- 右侧：地图 -->
@@ -184,6 +249,10 @@ import {
   Location,
 } from "@element-plus/icons-vue";
 import { getOrder, getTrackPoints, getStationStatus } from "../../../api/order";
+import {
+  buildRouteThroughWaypoints,
+  coordsFromTrackPoints,
+} from "../../../utils/trackPath";
 import type { TrackInfo, TrackPoint } from "./types";
 import type { StationInfo } from "../../../api/order/types";
 
@@ -200,12 +269,39 @@ const searchForm = reactive({
 const trackInfo = ref<TrackInfo | null>(null);
 const trackPoints = ref<TrackPoint[]>([]);
 
+/** 与车辆监控页一致：在途数据定时刷新 */
+const TRACK_POLL_MS = 45000;
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
+
 let map: any = null;
 let passedPolyline: any = null;
 let pendingPolyline: any = null;
+let routeOverlays: any[] = [];
 let markers: any[] = [];
 let currentMarker: any = null;
 const mapReady = ref(false);
+const getQueryValue = () =>
+  searchForm.queryType === "orderNo"
+    ? searchForm.orderNo.trim()
+    : searchForm.trackingNo.trim();
+
+const stopAutoRefresh = () => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+};
+
+const scheduleAutoRefresh = (orderStatus: string) => {
+  stopAutoRefresh();
+  if (orderStatus === "completed" || orderStatus === "cancelled") {
+    return;
+  }
+  refreshTimer = setInterval(() => {
+    if (!getQueryValue()) return;
+    handleSearch({ silent: true });
+  }, TRACK_POLL_MS);
+};
 
 const checkRouteAndSearch = () => {
   const orderNo = route.query.orderNo;
@@ -284,6 +380,25 @@ const initMap = () => {
   });
 };
 
+const addRoutePolyline = (
+  path: [number, number][],
+  options: Record<string, unknown>,
+) => {
+  if (!map || path.length < 2) return null;
+  const line = new AMap.Polyline({
+    path,
+    lineJoin: "round",
+    lineCap: "round",
+    showDir: true,
+    dirColor: "#ffffff",
+    dirOpacity: 0.95,
+    ...options,
+  });
+  map.add(line);
+  routeOverlays.push(line);
+  return line;
+};
+
 const drawTrack = (points: TrackPoint[]) => {
   if (!map || points.length === 0) return;
   clearTrack();
@@ -293,45 +408,42 @@ const drawTrack = (points: TrackPoint[]) => {
   const currentPoint = points.find((p) => p.isCurrent);
 
   if (passedPoints.length > 1) {
-    const passedPath = passedPoints.map((p) => [p.lng, p.lat]);
-    passedPolyline = new AMap.Polyline({
-      path: passedPath,
+    const passedPath = buildRouteThroughWaypoints(
+      coordsFromTrackPoints(passedPoints),
+    );
+    passedPolyline = addRoutePolyline(passedPath, {
       strokeColor: "#0ea5e9",
-      strokeWeight: 4,
+      strokeWeight: 5,
       strokeOpacity: 1,
-      lineJoin: "round",
-      lineCap: "round",
     });
-    map.add(passedPolyline);
   }
 
   if (pendingPoints.length > 0) {
-    let pendingPath: number[][];
+    let pendingWaypoints: [number, number][];
     if (currentPoint) {
-      pendingPath = [
+      pendingWaypoints = [
         [currentPoint.lng, currentPoint.lat],
-        ...pendingPoints.map((p) => [p.lng, p.lat]),
+        ...coordsFromTrackPoints(pendingPoints),
       ];
     } else if (passedPoints.length > 0) {
       const lastPassed = passedPoints[passedPoints.length - 1]!;
-      pendingPath = [
+      pendingWaypoints = [
         [lastPassed.lng, lastPassed.lat],
-        ...pendingPoints.map((p) => [p.lng, p.lat]),
+        ...coordsFromTrackPoints(pendingPoints),
       ];
     } else {
-      pendingPath = pendingPoints.map((p) => [p.lng, p.lat]);
+      pendingWaypoints = coordsFromTrackPoints(pendingPoints);
     }
 
-    pendingPolyline = new AMap.Polyline({
-      path: pendingPath,
-      strokeColor: "#94a3b8",
-      strokeWeight: 3,
-      strokeOpacity: 0.6,
-      strokeStyle: "dashed",
-      lineJoin: "round",
-      lineCap: "round",
-    });
-    map.add(pendingPolyline);
+    if (pendingWaypoints.length > 1) {
+      const pendingPath = buildRouteThroughWaypoints(pendingWaypoints);
+      pendingPolyline = addRoutePolyline(pendingPath, {
+        strokeColor: "#94a3b8",
+        strokeWeight: 4,
+        strokeOpacity: 0.75,
+        strokeStyle: "dashed",
+      });
+    }
   }
 
   points.forEach((point, index) => {
@@ -343,16 +455,16 @@ const drawTrack = (points: TrackPoint[]) => {
     if (isCurrent) {
       currentMarker = new AMap.Marker({
         position: [point.lng, point.lat],
-        content: `<div style="width:18px;height:18px;background:#0ea5e9;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(14,165,233,0.5);animation:pulse 1.5s infinite;"></div>`,
-        offset: new AMap.Pixel(-9, -9),
+        content: `<div class="track-dot track-dot-current"></div>`,
+        offset: new AMap.Pixel(-13, -13),
       });
       map.add(currentMarker);
       markers.push(currentMarker);
 
       const label = new AMap.Marker({
         position: [point.lng, point.lat],
-        content: `<div style="background:#0ea5e9;color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);">当前: ${point.location}</div>`,
-        offset: new AMap.Pixel(-60, -38),
+        content: `<div class="track-label track-label-current">当前: ${point.location}</div>`,
+        offset: new AMap.Pixel(-68, -44),
       });
       map.add(label);
       markers.push(label);
@@ -360,8 +472,8 @@ const drawTrack = (points: TrackPoint[]) => {
       const color = isStart ? "#10b981" : "#f59e0b";
       const marker = new AMap.Marker({
         position: [point.lng, point.lat],
-        content: `<div style="width:14px;height:14px;background:${color};border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.2);"></div>`,
-        offset: new AMap.Pixel(-7, -7),
+        content: `<div class="track-dot track-dot-endpoint" style="background:${color};"></div>`,
+        offset: new AMap.Pixel(-11, -11),
       });
       map.add(marker);
       markers.push(marker);
@@ -373,16 +485,16 @@ const drawTrack = (points: TrackPoint[]) => {
           : "";
       const labelMarker = new AMap.Marker({
         position: [point.lng, point.lat],
-        content: `<div style="background:${color};color:#fff;padding:5px 10px;border-radius:6px;font-size:12px;white-space:nowrap;text-align:center;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,0.15);">${labelPrefix}${point.location}${extraInfo}</div>`,
-        offset: new AMap.Pixel(-50, -42),
+        content: `<div class="track-label" style="background:${color};">${labelPrefix}${point.location}${extraInfo}</div>`,
+        offset: new AMap.Pixel(-54, -48),
       });
       map.add(labelMarker);
       markers.push(labelMarker);
     } else {
       const marker = new AMap.Marker({
         position: [point.lng, point.lat],
-        content: `<div style="width:8px;height:8px;background:${isPassed ? "#0ea5e9" : "#cbd5e1"};border:2px solid #fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>`,
-        offset: new AMap.Pixel(-4, -4),
+        content: `<div class="track-dot track-dot-waypoint" style="background:${isPassed ? "#0ea5e9" : "#cbd5e1"};"></div>`,
+        offset: new AMap.Pixel(-7, -7),
       });
       map.add(marker);
       markers.push(marker);
@@ -397,16 +509,22 @@ const drawTrack = (points: TrackPoint[]) => {
     }
   });
 
-  map.setFitView(null, false, [50, 50, 50, 50]);
+  const fitTargets = [...routeOverlays, ...markers];
+  if (fitTargets.length > 0) {
+    map.setFitView(fitTargets, false, [56, 56, 56, 56]);
+  }
 };
 
 const clearTrack = () => {
+  if (!map) return;
+  if (routeOverlays.length > 0) {
+    map.remove(routeOverlays);
+    routeOverlays = [];
+  }
   if (passedPolyline) {
-    map.remove(passedPolyline);
     passedPolyline = null;
   }
   if (pendingPolyline) {
-    map.remove(pendingPolyline);
     pendingPolyline = null;
   }
   if (markers.length > 0) {
@@ -419,23 +537,23 @@ const clearTrack = () => {
   }
 };
 
-const handleSearch = async () => {
-  const queryValue =
-    searchForm.queryType === "orderNo"
-      ? searchForm.orderNo
-      : searchForm.trackingNo;
+const handleSearch = async (options?: { silent?: boolean }) => {
+  const silent = options?.silent === true;
+  const queryValue = getQueryValue();
   if (!queryValue) {
-    ElMessage.warning(
-      searchForm.queryType === "orderNo" ? "请输入订单号" : "请输入运单号",
-    );
+    if (!silent) {
+      ElMessage.warning(
+        searchForm.queryType === "orderNo" ? "请输入订单号" : "请输入运单号",
+      );
+    }
     return;
   }
 
-  loading.value = true;
+  if (!silent) loading.value = true;
   try {
     const order = await getOrder(queryValue, searchForm.queryType);
     if (!order) {
-      ElMessage.warning("未找到该订单");
+      if (!silent) ElMessage.warning("未找到该订单");
       return;
     }
 
@@ -457,7 +575,7 @@ const handleSearch = async () => {
         : null;
 
     trackInfo.value = {
-      trackingNo: order.orderNo || queryValue,
+      trackingNo: order.trackingNo || order.orderNo || queryValue,
       expressCompanyName: order.expressCompanyName || order.expressCompany,
       origin: order.origin,
       destination: order.destination,
@@ -465,6 +583,12 @@ const handleSearch = async () => {
       statusText: getStatusText(orderStatus),
       sendTime: hasSent ? order.createTime || "" : "",
       estimatedTime: estimatedArrival ? formatDateTime(estimatedArrival) : "",
+      vehiclePlateNumber: order.vehiclePlateNumber,
+      vehicleType: order.vehicleType,
+      vehicleDriverName: order.vehicleDriverName,
+      vehicleDriverPhone: order.vehicleDriverPhone,
+      vehicleOnline: order.vehicleOnline,
+      currentSpeedKmh: order.currentSpeedKmh,
     };
 
     const orderNo = order.orderNo || queryValue;
@@ -518,15 +642,19 @@ const handleSearch = async () => {
 
       trackPoints.value = allPoints.filter((p) => p.passed).reverse();
       drawTrack(allPoints);
-      ElMessage.success("查询成功");
+      scheduleAutoRefresh(orderStatus);
+      if (!silent) ElMessage.success("查询成功");
       return;
     }
 
     const points = await getTrackPoints(orderNo);
     if (points.length === 0) {
-      ElMessage.warning("该订单暂无轨迹数据");
-      trackPoints.value = [];
-      clearTrack();
+      if (!silent) {
+        ElMessage.warning("该订单暂无轨迹数据");
+        trackPoints.value = [];
+        clearTrack();
+      }
+      stopAutoRefresh();
       return;
     }
 
@@ -576,16 +704,20 @@ const handleSearch = async () => {
 
     trackPoints.value = allPoints.filter((p) => p.passed).reverse();
     drawTrack(allPoints);
-    ElMessage.success("查询成功");
+    scheduleAutoRefresh(orderStatus);
+    if (!silent) ElMessage.success("查询成功");
   } catch (error: any) {
-    if (error?.response?.status === 404) ElMessage.warning("未找到该订单");
-    else ElMessage.error("查询失败");
+    if (!silent) {
+      if (error?.response?.status === 404) ElMessage.warning("未找到该订单");
+      else ElMessage.error("查询失败");
+    }
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 };
 
 const handleReset = () => {
+  stopAutoRefresh();
   searchForm.orderNo = "";
   searchForm.trackingNo = "";
   searchForm.queryType = "orderNo";
@@ -610,6 +742,7 @@ onMounted(() => {
 onActivated(() => checkRouteAndSearch());
 
 onUnmounted(() => {
+  stopAutoRefresh();
   if (map) {
     map.destroy();
     map = null;
@@ -627,15 +760,35 @@ onUnmounted(() => {
   display: flex;
   gap: 20px;
   height: 100%;
+  min-height: 0;
 }
 
 .track-sidebar {
-  width: 380px;
+  width: min(400px, 38vw);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
+}
+
+/* 查询以下整块可纵向滚动，避免信息被裁切 */
+.sidebar-body-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.sidebar-body-scroll :deep(.el-scrollbar__wrap) {
+  overflow-x: hidden;
+}
+
+.sidebar-scroll-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 2px 8px 0;
 }
 
 /* 查询卡片 - 紧凑样式 */
@@ -677,14 +830,13 @@ onUnmounted(() => {
   padding: 12px 16px;
 }
 
-/* 轨迹卡片 - 占据剩余空间 */
+/* 轨迹卡片：高度随内容增长，由外侧 sidebar-body-scroll 统一滚动 */
 .timeline-card {
-  flex: 1;
-  min-height: 180px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .timeline-card :deep(.el-card__header) {
@@ -698,16 +850,11 @@ onUnmounted(() => {
 }
 
 .timeline-card :deep(.el-card__body) {
-  flex: 1;
   padding: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
-.timeline-scrollbar {
-  flex: 1;
-  padding: 12px 16px;
+.timeline-inner {
+  padding: 12px 16px 16px;
 }
 
 .track-count {
@@ -816,9 +963,21 @@ onUnmounted(() => {
   margin-top: 2px;
 }
 
+.timeline-vehicle-speed {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+.vehicle-card {
+  margin-top: 0;
+}
+
 /* 地图区域 */
 .track-map {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -856,6 +1015,45 @@ onUnmounted(() => {
 .map-placeholder p {
   margin: 0;
   font-size: 14px;
+}
+
+:global(.track-dot) {
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+}
+
+:global(.track-dot-current) {
+  width: 26px;
+  height: 26px;
+  background: #0ea5e9;
+  animation: pulse 1.5s infinite;
+}
+
+:global(.track-dot-endpoint) {
+  width: 22px;
+  height: 22px;
+}
+
+:global(.track-dot-waypoint) {
+  width: 14px;
+  height: 14px;
+}
+
+:global(.track-label) {
+  color: #fff;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+:global(.track-label-current) {
+  background: #0ea5e9;
 }
 
 @keyframes pulse {

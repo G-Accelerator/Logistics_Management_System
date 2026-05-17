@@ -9,6 +9,8 @@ import java.util.List;
 public class ShipRequest {
     private List<TrackPoint> trackPoints;
     private int duration;
+    /** 发货必选绑定车辆 */
+    private Long vehicleId;
 
     public ShipRequest() {}
 
@@ -16,4 +18,6 @@ public class ShipRequest {
     public void setTrackPoints(List<TrackPoint> trackPoints) { this.trackPoints = trackPoints; }
     public int getDuration() { return duration; }
     public void setDuration(int duration) { this.duration = duration; }
+    public Long getVehicleId() { return vehicleId; }
+    public void setVehicleId(Long vehicleId) { this.vehicleId = vehicleId; }
 }

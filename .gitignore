@@ -1,2 +1,5 @@
 # Kiro settings
 .kiro/
+
+# 本地设计/论文文档，不纳入版本库
+docs/

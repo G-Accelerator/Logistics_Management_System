@@ -41,3 +41,21 @@ export function logout(): Promise<void> {
 export function getUserInfo(): Promise<UserInfo> {
   return request.get("/auth/userinfo");
 }
+
+export function updateProfile(data: { nickname: string }): Promise<UserInfo> {
+  return request.put("/auth/profile", data);
+}
+
+export function changeUsername(data: {
+  newUsername: string;
+  password: string;
+}): Promise<UserInfo> {
+  return request.put("/auth/username", data);
+}
+
+export function changePassword(data: {
+  oldPassword: string;
+  newPassword: string;
+}): Promise<void> {
+  return request.put("/auth/password", data);
+}

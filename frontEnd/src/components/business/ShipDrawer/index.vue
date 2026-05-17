@@ -17,6 +17,26 @@
         }}</el-descriptions-item>
       </el-descriptions>
 
+      <!-- 选择货车 -->
+      <div class="vehicle-section">
+        <div class="section-title">选择货车（必选）</div>
+        <el-select
+          v-model="selectedVehicleId"
+          placeholder="请选择空闲车辆"
+          filterable
+          style="width: 100%"
+          :loading="vehiclesLoading"
+          @visible-change="onVehicleSelectOpen"
+        >
+          <el-option
+            v-for="v in availableVehicles"
+            :key="v.id!"
+            :label="`${v.plateNumber}（${v.vehicleType}｜${v.driverName}）`"
+            :value="v.id!"
+          />
+        </el-select>
+      </div>
+
       <!-- 路线规划 -->
       <div class="route-section">
         <div class="section-title">选择运输路线</div>
@@ -65,7 +85,7 @@
       <el-button
         type="primary"
         :loading="shipping"
-        :disabled="!selectedRoute"
+        :disabled="!selectedRoute || selectedVehicleId == null"
         @click="handleShip"
       >
         确认发货
@@ -82,12 +102,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { ElMessage } from "element-plus";
 import RoutePlanner from "../RoutePlanner/index.vue";
 import MapDialog from "../MapDialog/index.vue";
 import { shipOrder } from "../../../api/order";
 import type { Order } from "../../../api/order/types";
+import {
+  getVehiclesAvailableForShip,
+  type Vehicle,
+} from "../../../api/system/vehicle";
 import type { RouteOptionData, RouteTrackPoint } from "../RoutePlanner/types";
 import type { MapPoint } from "../MapDialog/types";
 
@@ -111,6 +135,31 @@ const selectedRoute = ref<RouteOptionData | null>(null);
 const trackPoints = ref<RouteTrackPoint[]>([]);
 const shipping = ref(false);
 const showMapDialog = ref(false);
+const availableVehicles = ref<Vehicle[]>([]);
+const vehiclesLoading = ref(false);
+const selectedVehicleId = ref<number | null>(null);
+
+const loadAvailableVehicles = async () => {
+  vehiclesLoading.value = true;
+  try {
+    availableVehicles.value = await getVehiclesAvailableForShip();
+  } catch {
+    availableVehicles.value = [];
+  } finally {
+    vehiclesLoading.value = false;
+  }
+};
+
+const onVehicleSelectOpen = (open: boolean) => {
+  if (open) loadAvailableVehicles();
+};
+
+watch(visible, (v) => {
+  if (v) {
+    selectedVehicleId.value = null;
+    loadAvailableVehicles();
+  }
+});
 
 // 快递公司名称（直接使用后端返回的名称）
 const expressCompanyName = computed(() => {
@@ -152,12 +201,17 @@ const handleShip = async () => {
     ElMessage.warning("请先选择运输路线");
     return;
   }
+  if (selectedVehicleId.value == null) {
+    ElMessage.warning("请选择货车");
+    return;
+  }
 
   shipping.value = true;
   try {
     const result = await shipOrder(props.order.orderNo, {
       trackPoints: selectedRoute.value.trackPoints,
       duration: selectedRoute.value.duration,
+      vehicleId: selectedVehicleId.value,
     });
     ElMessage.success(`发货成功，运单号：${result.trackingNo}`);
     emit("success", result);
@@ -173,6 +227,8 @@ const handleShip = async () => {
 const handleClosed = () => {
   selectedRoute.value = null;
   trackPoints.value = [];
+  selectedVehicleId.value = null;
+  availableVehicles.value = [];
   routePlannerRef.value?.clearRoutes();
 };
 </script>
@@ -188,6 +244,7 @@ const handleClosed = () => {
   margin-bottom: 8px;
 }
 
+.vehicle-section,
 .route-section,
 .station-section {
   padding: 16px;

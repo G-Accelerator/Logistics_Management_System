@@ -7,8 +7,10 @@ import com.example.demo.dto.PageResult;
 import com.example.demo.dto.RoutePlanResponse.TrackPoint;
 import com.example.demo.entity.OperationLog;
 import com.example.demo.entity.Order;
+import com.example.demo.entity.Vehicle;
 import com.example.demo.repository.OperationLogRepository;
 import com.example.demo.repository.OrderRepository;
+import com.example.demo.repository.VehicleRepository;
 import com.example.demo.util.ExcelUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,6 +69,12 @@ public class OrderService {
     @Autowired
     private ExpressCompanyService expressCompanyService;
 
+    @Autowired
+    private VehicleRepository vehicleRepository;
+
+    @Autowired
+    private SmsSimulationService smsSimulationService;
+
     public OrderService() {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
@@ -96,12 +104,12 @@ public class OrderService {
      * 查询订单列表（使用JPA Specification动态查询）
      */
     public PageResult<Order> getOrders(int page, int pageSize, String orderNo,
-                                       String trackingNo, String status, String cargoType, 
-                                       String cargoName, String expressCompany, String senderName, 
-                                       String receiverName, String receiverPhone) {
-        
-        Specification<Order> spec = buildSpecification(orderNo, trackingNo, status, cargoType, 
-            cargoName, expressCompany, senderName, receiverName, receiverPhone, null);
+                                       String trackingNo, String status, String cargoType,
+                                       String cargoName, String expressCompany, String senderName,
+                                       String receiverName, String receiverPhone, String senderPhone) {
+
+        Specification<Order> spec = buildSpecification(orderNo, trackingNo, status, cargoType,
+            cargoName, expressCompany, senderName, receiverName, receiverPhone, senderPhone);
         
         PageRequest pageRequest = PageRequest.of(page - 1, pageSize, Sort.by(Sort.Direction.DESC, "id"));
         Page<Order> pageResult = orderRepository.findAll(spec, pageRequest);
@@ -196,9 +204,62 @@ public class OrderService {
         if (order == null || order.getOrderNo() == null) {
             return null;
         }
-        Order saved = orderRepository.save(order);
-        log.info("更新订单: {}", saved.getOrderNo());
-        return saved;
+        orderRepository.save(order);
+        log.info("更新订单: {}", order.getOrderNo());
+        return getOrder(order.getOrderNo());
+    }
+
+    /**
+     * 是否存在指定车辆且处于某状态的订单（如运输中占用）
+     */
+    public boolean existsByVehicleIdAndStatus(Long vehicleId, String status) {
+        if (vehicleId == null || status == null) {
+            return false;
+        }
+        return orderRepository.existsByVehicleIdAndStatus(vehicleId, status);
+    }
+
+    /**
+     * 运单场景：更新绑定车辆的当前车速
+     */
+    @Transactional
+    public Order updateVehicleSpeed(String orderNo, int currentSpeedKmh) {
+        return updateTransportControl(orderNo, currentSpeedKmh, null);
+    }
+
+    /**
+     * 运单在途管控：调整当前车速、绑定车辆在线状态（至少一项非空）
+     */
+    @Transactional
+    public Order updateTransportControl(String orderNo, Integer currentSpeedKmh, Boolean vehicleOnline) {
+        Order order = orderRepository.findByOrderNo(orderNo)
+            .orElseThrow(() -> new IllegalArgumentException("订单不存在"));
+        if (!"shipping".equals(order.getStatus())) {
+            throw new IllegalStateException("仅运输中的订单可操作");
+        }
+        if (currentSpeedKmh == null && vehicleOnline == null) {
+            throw new IllegalArgumentException("请至少填写车速或在线状态其中一项");
+        }
+        if (order.getVehicleId() == null && (currentSpeedKmh != null || vehicleOnline != null)) {
+            throw new IllegalStateException("订单未绑定车辆，无法调整车速或在线状态");
+        }
+        if (currentSpeedKmh != null) {
+            if (currentSpeedKmh < 1 || currentSpeedKmh > 300) {
+                throw new IllegalArgumentException("车速需在 1-300 km/h 之间");
+            }
+            order.setCurrentSpeedKmh(currentSpeedKmh);
+            orderRepository.save(order);
+        }
+        if (vehicleOnline != null) {
+            Vehicle v = vehicleRepository.findById(order.getVehicleId())
+                .orElseThrow(() -> new IllegalArgumentException("车辆不存在"));
+            v.setOnline(vehicleOnline);
+            vehicleRepository.save(v);
+        }
+        if (order.getVehicleId() != null) {
+            smsSimulationService.evaluateAlerts(order.getVehicleId());
+        }
+        return getOrder(orderNo);
     }
 
     /**
@@ -317,9 +378,27 @@ public class OrderService {
      * 将trackPointsJson转换为List<TrackPoint>并设置到transient字段
      */
     private Order convertTrackPointsFromJson(Order order) {
-        // 填充快递公司名称
         fillExpressCompanyName(order);
+        fillVehicleInfo(order);
         return order;
+    }
+
+    private void fillVehicleInfo(Order order) {
+        order.setVehiclePlateNumber(null);
+        order.setVehicleType(null);
+        order.setVehicleDriverName(null);
+        order.setVehicleDriverPhone(null);
+        order.setVehicleOnline(null);
+        if (order.getVehicleId() == null) {
+            return;
+        }
+        vehicleRepository.findById(order.getVehicleId()).ifPresent(v -> {
+            order.setVehiclePlateNumber(v.getPlateNumber());
+            order.setVehicleType(v.getVehicleType());
+            order.setVehicleDriverName(v.getDriverName());
+            order.setVehicleDriverPhone(v.getDriverPhone());
+            order.setVehicleOnline(v.getOnline());
+        });
     }
     
     /**

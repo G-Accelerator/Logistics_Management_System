@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/file-appender.xml"/>
+
+    <!-- 控制台仅输出：登录验证码、模拟短信 -->
+    <appender name="NOTIFY_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%clr(%d{HH:mm:ss.SSS}){faint} %highlight(%-5level) %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <logger name="com.example.demo.auth.verifycode" level="INFO" additivity="false">
+        <appender-ref ref="NOTIFY_CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <logger name="com.example.demo.sms" level="INFO" additivity="false">
+        <appender-ref ref="NOTIFY_CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <!-- 其它日志只写文件，不打控制台 -->
+    <root level="INFO">
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>

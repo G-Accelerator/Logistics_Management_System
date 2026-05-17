@@ -23,6 +23,13 @@ export interface Order {
   originLat?: number;
   destLng?: number;
   destLat?: number;
+  vehicleId?: number;
+  currentSpeedKmh?: number;
+  vehiclePlateNumber?: string;
+  vehicleType?: string;
+  vehicleDriverName?: string;
+  vehicleDriverPhone?: string;
+  vehicleOnline?: boolean;
 }
 
 /** 创建订单请求 */
@@ -50,6 +57,13 @@ export interface CreateOrderRequest {
 export interface ShipRequest {
   trackPoints: RouteTrackPoint[];
   duration: number;
+  vehicleId: number;
+}
+
+/** 运单在途管控（车速与车辆在线，至少传一项） */
+export interface TransportControlRequest {
+  currentSpeedKmh?: number;
+  vehicleOnline?: boolean;
 }
 
 export interface PageResult<T> {
@@ -69,6 +83,7 @@ export interface OrderQueryParams {
   senderName?: string;
   receiverName?: string;
   receiverPhone?: string;
+  senderPhone?: string;
 }
 
 /** 路线策略 */

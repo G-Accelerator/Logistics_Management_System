@@ -28,7 +28,7 @@
 
 <script setup lang="tsx">
 import { h, ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
 import {
   Plus,
@@ -57,6 +57,7 @@ import type {
 import { downloadOrderExport } from "../../../utils/file";
 
 const router = useRouter();
+const route = useRoute();
 const tableRef = ref<InstanceType<typeof DataTable> | null>(null);
 
 // 导入对话框状态
@@ -457,6 +458,17 @@ const loadData = async (params: any) => {
       receiverName: params.receiverName,
     };
 
+    const receiverPhone =
+      params.receiverPhone ||
+      (typeof route.query.receiverPhone === "string"
+        ? route.query.receiverPhone
+        : undefined);
+    const senderPhone =
+      params.senderPhone ||
+      (typeof route.query.senderPhone === "string"
+        ? route.query.senderPhone
+        : undefined);
+
     const result = await getOrders({
       page: params.page,
       pageSize: params.pageSize,
@@ -468,6 +480,8 @@ const loadData = async (params: any) => {
       expressCompany: params.expressCompany,
       senderName: params.senderName,
       receiverName: params.receiverName,
+      receiverPhone,
+      senderPhone,
     });
     return { data: result.data, total: result.total };
   } catch (error) {

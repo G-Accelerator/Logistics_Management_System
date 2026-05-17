@@ -247,11 +247,8 @@
           </el-form-item>
         </el-form>
 
-        <div class="login-tips">
-          <p v-if="loginType === 'account'">
-            <span class="tip-icon">💡</span> 默认账号：admin / 123456
-          </p>
-          <p v-else-if="loginType === 'buyer'">
+        <div v-if="loginType !== 'account'" class="login-tips">
+          <p v-if="loginType === 'buyer'">
             <span class="tip-icon">📱</span> 输入收货手机号查询您的订单
           </p>
           <p v-else>
@@ -283,8 +280,8 @@ const countdown = ref(0);
 const loginType = ref<"account" | "buyer" | "seller">("account");
 
 const loginForm = reactive<LoginForm>({
-  username: "admin",
-  password: "123456",
+  username: "",
+  password: "",
 });
 
 const phoneForm = reactive({
@@ -323,8 +320,8 @@ const handleSendCode = async () => {
 
   sendingCode.value = true;
   try {
-    await sendVerifyCode(phoneForm.phone);
-    ElMessage.success("验证码已发送，请查看后端控制台");
+    await sendVerifyCode(phoneForm.phone.trim());
+    ElMessage.success("验证码已发送，请注意查收");
     countdown.value = 60;
     const timer = setInterval(() => {
       countdown.value--;
@@ -362,13 +359,17 @@ const handlePhoneLogin = async () => {
       loading.value = true;
       try {
         const role = loginType.value === "buyer" ? "buyer" : "seller";
-        await userStore.loginByPhone(phoneForm.phone, phoneForm.code, role);
+        await userStore.loginByPhone(
+          phoneForm.phone.trim(),
+          phoneForm.code.trim(),
+          role,
+        );
         ElMessage.success("验证成功");
         router.push(
           loginType.value === "buyer" ? "/buyer/orders" : "/seller/shipment",
         );
-      } catch (error) {
-        ElMessage.error("验证失败，请检查验证码");
+      } catch {
+        // 错误文案由 request 拦截器展示（如验证码错误或已过期）
       } finally {
         loading.value = false;
       }

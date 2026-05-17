@@ -62,4 +62,8 @@ export interface DataTableProps {
   pageSizes?: number[];
   initialPage?: number;
   initialPageSize?: number;
+  rowKey?: string | ((row: any) => string);
+  rowClassName?: (data: { row: any; rowIndex: number }) => string;
+  emptyText?: string;
+  tableClass?: string;
 }

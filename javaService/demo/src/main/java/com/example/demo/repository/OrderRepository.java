@@ -32,6 +32,10 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Object[]> countGroupByStatus();
     
     boolean existsByOrderNo(String orderNo);
+
+    boolean existsByVehicleIdAndStatus(Long vehicleId, String status);
+
+    Optional<Order> findFirstByVehicleIdAndStatus(Long vehicleId, String status);
     
     void deleteByOrderNo(String orderNo);
 }

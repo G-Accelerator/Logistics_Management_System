@@ -27,14 +27,48 @@ export function getAccessibleRoutes() {
   return [...constantRoutes, ...filterRoutesByRole(asyncRoutes, role)];
 }
 
+/** 登录后各角色均可访问的公共页（不挂在带 redirect 的菜单树下） */
+const AUTH_COMMON_PATHS = ["/dashboard", "/profile"];
+
+function normalizeRoutePath(routePath: string, parentPath = ""): string {
+  if (routePath.startsWith("/")) return routePath;
+  const base = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
+  return `${base}/${routePath}`.replace(/\/+/g, "/");
+}
+
+function pathMatches(routePath: string, targetPath: string, parentPath = ""): boolean {
+  return normalizeRoutePath(routePath, parentPath) === targetPath;
+}
+
+function isConstantPath(path: string): boolean {
+  return constantRoutes.some((route) => {
+    if (pathMatches(route.path, path)) return true;
+    if (
+      route.children?.some((child) =>
+        pathMatches(String(child.path), path, route.path),
+      )
+    ) {
+      return true;
+    }
+    return false;
+  });
+}
+
 // 检查路由是否可访问
 function canAccessRoute(path: string, role: UserRole): boolean {
+  if (AUTH_COMMON_PATHS.includes(path)) {
+    return true;
+  }
+
+  if (isConstantPath(path)) {
+    return true;
+  }
+
   const accessibleRoutes = filterRoutesByRole(asyncRoutes, role);
 
-  // 检查路径是否在可访问路由中
   const checkRoutes = (routes: typeof accessibleRoutes): boolean => {
     for (const route of routes) {
-      if (route.path === path || path.startsWith(route.path + "/")) {
+      if (pathMatches(route.path, path) || path.startsWith(route.path + "/")) {
         return true;
       }
       if (route.children && checkRoutes(route.children)) {
@@ -44,15 +78,7 @@ function canAccessRoute(path: string, role: UserRole): boolean {
     return false;
   };
 
-  // 常量路由始终可访问
-  const isConstantRoute = constantRoutes.some(
-    (r) =>
-      r.path === path ||
-      path.startsWith(r.path + "/") ||
-      r.children?.some((c) => c.path === path),
-  );
-
-  return isConstantRoute || checkRoutes(accessibleRoutes);
+  return checkRoutes(accessibleRoutes);
 }
 
 // 获取角色默认首页

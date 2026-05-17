@@ -7,37 +7,20 @@
       :load-data="loadData"
       :show-toolbar="false"
       :show-selection="false"
-      :operation-width="180"
-    >
-      <template #operation="{ row }">
-        <el-button type="primary" link @click="handleViewTrack(row)">
-          <el-icon><Location /></el-icon>查看物流
-        </el-button>
-        <el-button
-          v-if="row.status === 'shipping'"
-          type="success"
-          link
-          @click="handleReceive(row)"
-        >
-          <el-icon><Check /></el-icon>确认收货
-        </el-button>
-      </template>
-    </data-table>
+      :operations="operations"
+      :operation-width="160"
+    />
   </page-container>
 </template>
 
 <script setup lang="tsx">
-import { h, ref, onMounted } from "vue";
+import { h, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElButton, ElTag, ElMessage, ElMessageBox } from "element-plus";
-import {
-  DocumentCopy,
-  Document,
-  Location,
-  Check,
-} from "@element-plus/icons-vue";
+import { DocumentCopy } from "@element-plus/icons-vue";
 import PageContainer from "../../../components/layout/PageContainer/index.vue";
 import DataTable from "../../../components/business/DataTable/index.vue";
+import type { Operation } from "../../../components/business/DataTable/types";
 import { getBuyerOrders, receiveOrder } from "../../../api/order";
 
 const router = useRouter();
@@ -201,6 +184,16 @@ const handleReceive = async (row: any) => {
   }
 };
 
+const operations: Operation[] = [
+  { label: "查看物流", type: "primary", handler: handleViewTrack },
+  {
+    label: "确认收货",
+    type: "primary",
+    show: (row) => row.status === "shipping",
+    handler: handleReceive,
+  },
+];
+
 const loadData = async (params: any) => {
   try {
     const result = await getBuyerOrders({
@@ -216,6 +209,4 @@ const loadData = async (params: any) => {
     return { data: [], total: 0 };
   }
 };
-
-onMounted(() => {});
 </script>

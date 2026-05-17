@@ -1,9 +1,12 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.ApiResponse;
+import com.example.demo.dto.ChangePasswordRequest;
+import com.example.demo.dto.ChangeUsernameRequest;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.LoginResponse;
 import com.example.demo.dto.PhoneLoginRequest;
+import com.example.demo.dto.UpdateProfileRequest;
 import com.example.demo.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -96,6 +99,64 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, e.getMessage()));
         }
+    }
+
+    /**
+     * 更新昵称（管理员）
+     */
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<LoginResponse.UserInfo>> updateProfile(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody UpdateProfileRequest request) {
+        try {
+            String token = requireToken(authorization);
+            LoginResponse.UserInfo info = authService.updateProfile(token, request);
+            return ResponseEntity.ok(ApiResponse.success("保存成功", info));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+
+    /**
+     * 修改登录用户名（管理员）
+     */
+    @PutMapping("/username")
+    public ResponseEntity<ApiResponse<LoginResponse.UserInfo>> changeUsername(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody ChangeUsernameRequest request) {
+        try {
+            String token = requireToken(authorization);
+            LoginResponse.UserInfo info = authService.changeUsername(token, request);
+            return ResponseEntity.ok(ApiResponse.success("用户名已更新", info));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+
+    /**
+     * 修改密码（管理员）
+     */
+    @PutMapping("/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody ChangePasswordRequest request) {
+        try {
+            String token = requireToken(authorization);
+            authService.changePassword(token, request);
+            return ResponseEntity.ok(ApiResponse.success("密码已修改", null));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+
+    private String requireToken(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            throw new RuntimeException("未登录");
+        }
+        return authorization.substring(7);
     }
 
     /**

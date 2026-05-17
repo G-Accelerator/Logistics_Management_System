@@ -8,6 +8,7 @@ import type {
   RouteTrackPoint,
   CreateOrderRequest,
   ShipRequest,
+  TransportControlRequest,
   BatchResult,
   OperationLog,
   StationInfo,
@@ -28,6 +29,7 @@ export type {
   RouteTrackPoint,
   CreateOrderRequest,
   ShipRequest,
+  TransportControlRequest,
   BatchResult,
   OperationLog,
   StationInfo,
@@ -155,6 +157,24 @@ export function planRouteApi(
  */
 export function shipOrder(orderNo: string, data: ShipRequest): Promise<Order> {
   return request.put(`/orders/${orderNo}/ship`, data);
+}
+
+/** 调整运输中单绑定车辆的当前车速 */
+export function updateOrderVehicleSpeed(
+  orderNo: string,
+  currentSpeedKmh: number,
+): Promise<Order> {
+  return request.put(`/orders/${orderNo}/vehicle-speed`, {
+    currentSpeedKmh,
+  });
+}
+
+/** 运单在途管控：车速与绑定车辆在线状态（至少传一项） */
+export function updateOrderTransportControl(
+  orderNo: string,
+  body: TransportControlRequest,
+): Promise<Order> {
+  return request.put(`/orders/${orderNo}/transport-control`, body);
 }
 
 /**

@@ -12,6 +12,8 @@ import com.example.demo.dto.RoutePlanResponse;
 import com.example.demo.dto.RoutePlanResponse.TrackPoint;
 import com.example.demo.dto.ShipRequest;
 import com.example.demo.dto.StationInfo;
+import com.example.demo.dto.TransportControlRequest;
+import com.example.demo.dto.VehicleSpeedRequest;
 import com.example.demo.entity.OperationLog;
 import com.example.demo.entity.Order;
 import com.example.demo.service.AMapService;
@@ -90,8 +92,8 @@ public class OrderController {
                     .body(ApiResponse.error(401, "未登录或非买家用户"));
         }
         
-        PageResult<Order> result = orderService.getOrders(page, pageSize, orderNo, null, status, null, 
-            cargoName, null, null, null, phone);
+        PageResult<Order> result = orderService.getOrders(page, pageSize, orderNo, null, status, null,
+            cargoName, null, null, null, phone, null);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
@@ -179,9 +181,10 @@ public class OrderController {
             @RequestParam(required = false) String expressCompany,
             @RequestParam(required = false) String senderName,
             @RequestParam(required = false) String receiverName,
-            @RequestParam(required = false) String receiverPhone) {
-        PageResult<Order> result = orderService.getOrders(page, pageSize, orderNo, trackingNo, status, cargoType, 
-            cargoName, expressCompany, senderName, receiverName, receiverPhone);
+            @RequestParam(required = false) String receiverPhone,
+            @RequestParam(required = false) String senderPhone) {
+        PageResult<Order> result = orderService.getOrders(page, pageSize, orderNo, trackingNo, status, cargoType,
+            cargoName, expressCompany, senderName, receiverName, receiverPhone, senderPhone);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
@@ -277,14 +280,73 @@ public class OrderController {
             @PathVariable String orderNo,
             @RequestBody ShipRequest request) {
         try {
-            Order order = orderStatusService.ship(orderNo, request.getTrackPoints(), request.getDuration());
+            Order order = orderStatusService.ship(
+                orderNo,
+                request.getTrackPoints(),
+                request.getDuration(),
+                request.getVehicleId());
             return ResponseEntity.ok(ApiResponse.success("发货成功", order));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error(404, e.getMessage()));
+            int code = e.getMessage() != null && e.getMessage().contains("不存在") ? 404 : 400;
+            HttpStatus status = code == 404 ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status)
+                    .body(ApiResponse.error(code, e.getMessage()));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+
+    /**
+     * 调整运输中单绑定车辆的当前车速（可超过车辆限速以触发超速预警）
+     */
+    @PutMapping("/{orderNo}/vehicle-speed")
+    public ResponseEntity<ApiResponse<Order>> updateVehicleSpeed(
+            @PathVariable String orderNo,
+            @RequestBody VehicleSpeedRequest body) {
+        try {
+            if (body == null || body.getCurrentSpeedKmh() == null) {
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "请填写当前车速"));
+            }
+            Order order = orderService.updateVehicleSpeed(orderNo, body.getCurrentSpeedKmh());
+            return ResponseEntity.ok(ApiResponse.success("车速已更新", order));
+        } catch (IllegalArgumentException e) {
+            int code = e.getMessage() != null && e.getMessage().contains("不存在") ? 404 : 400;
+            HttpStatus status = code == 404 ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status)
+                .body(ApiResponse.error(code, e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+
+    /**
+     * 运单在途管控：车速与绑定车辆在线状态（至少传一项；可与前端统一入口配合）
+     */
+    @PutMapping("/{orderNo}/transport-control")
+    public ResponseEntity<ApiResponse<Order>> updateTransportControl(
+            @PathVariable String orderNo,
+            @RequestBody TransportControlRequest body) {
+        try {
+            if (body == null) {
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "请求体不能为空"));
+            }
+            Order order = orderService.updateTransportControl(
+                orderNo,
+                body.getCurrentSpeedKmh(),
+                body.getVehicleOnline());
+            return ResponseEntity.ok(ApiResponse.success("已更新", order));
+        } catch (IllegalArgumentException e) {
+            int code = e.getMessage() != null && e.getMessage().contains("不存在") ? 404 : 400;
+            HttpStatus status = code == 404 ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status)
+                .body(ApiResponse.error(code, e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(400, e.getMessage()));
         }
     }
 

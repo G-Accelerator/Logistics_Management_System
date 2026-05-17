@@ -72,6 +72,25 @@ public class Order {
     private Double destLng;     // 收货地经度
     private Double destLat;     // 收货地纬度
 
+    /** 绑定车辆（发货时写入） */
+    @Column(name = "vehicle_id")
+    private Long vehicleId;
+
+    /** 当前车速 km/h（发货随机初始化，运单可改） */
+    @Column(name = "current_speed_kmh")
+    private Integer currentSpeedKmh;
+
+    @Transient
+    private String vehiclePlateNumber;
+    @Transient
+    private String vehicleType;
+    @Transient
+    private String vehicleDriverName;
+    @Transient
+    private String vehicleDriverPhone;
+    @Transient
+    private Boolean vehicleOnline;
+
     public Order() {}
 
     // Getters and Setters
@@ -131,4 +150,19 @@ public class Order {
     public void setDestLng(Double destLng) { this.destLng = destLng; }
     public Double getDestLat() { return destLat; }
     public void setDestLat(Double destLat) { this.destLat = destLat; }
+
+    public Long getVehicleId() { return vehicleId; }
+    public void setVehicleId(Long vehicleId) { this.vehicleId = vehicleId; }
+    public Integer getCurrentSpeedKmh() { return currentSpeedKmh; }
+    public void setCurrentSpeedKmh(Integer currentSpeedKmh) { this.currentSpeedKmh = currentSpeedKmh; }
+    public String getVehiclePlateNumber() { return vehiclePlateNumber; }
+    public void setVehiclePlateNumber(String vehiclePlateNumber) { this.vehiclePlateNumber = vehiclePlateNumber; }
+    public String getVehicleType() { return vehicleType; }
+    public void setVehicleType(String vehicleType) { this.vehicleType = vehicleType; }
+    public String getVehicleDriverName() { return vehicleDriverName; }
+    public void setVehicleDriverName(String vehicleDriverName) { this.vehicleDriverName = vehicleDriverName; }
+    public String getVehicleDriverPhone() { return vehicleDriverPhone; }
+    public void setVehicleDriverPhone(String vehicleDriverPhone) { this.vehicleDriverPhone = vehicleDriverPhone; }
+    public Boolean getVehicleOnline() { return vehicleOnline; }
+    public void setVehicleOnline(Boolean vehicleOnline) { this.vehicleOnline = vehicleOnline; }
 }

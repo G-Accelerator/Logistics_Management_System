@@ -223,7 +223,7 @@ const handleCommand = async (command: string) => {
       router.push("/login");
     } catch {}
   } else if (command === "profile") {
-    ElMessage.info("个人中心功能开发中");
+    router.push("/profile");
   }
 };
 </script>

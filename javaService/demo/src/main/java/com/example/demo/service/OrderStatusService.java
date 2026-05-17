@@ -4,7 +4,9 @@ import com.example.demo.dto.BatchResult;
 import com.example.demo.dto.RoutePlanResponse.TrackPoint;
 import com.example.demo.entity.OperationLog;
 import com.example.demo.entity.Order;
+import com.example.demo.entity.Vehicle;
 import com.example.demo.repository.OperationLogRepository;
+import com.example.demo.repository.VehicleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -44,12 +46,15 @@ public class OrderStatusService {
     private final OrderService orderService;
     private final OperationLogRepository operationLogRepository;
     private final ExpressCompanyService expressCompanyService;
+    private final VehicleRepository vehicleRepository;
 
     public OrderStatusService(OrderService orderService, OperationLogRepository operationLogRepository,
-                             ExpressCompanyService expressCompanyService) {
+                             ExpressCompanyService expressCompanyService,
+                             VehicleRepository vehicleRepository) {
         this.orderService = orderService;
         this.operationLogRepository = operationLogRepository;
         this.expressCompanyService = expressCompanyService;
+        this.vehicleRepository = vehicleRepository;
     }
 
 
@@ -69,20 +74,27 @@ public class OrderStatusService {
 
     /**
      * 发货操作：pending -> shipping
-     * @param orderNo 订单号
-     * @param trackPoints 轨迹点数据
-     * @param duration 预计时长(秒)
-     * @return 更新后的订单
-     * @throws IllegalStateException 如果状态转换非法
-     * @throws IllegalArgumentException 如果订单不存在
+     * @param vehicleId 必选绑定车辆；占用规则见 {@link OrderService#existsByVehicleIdAndStatus}
      */
-    public Order ship(String orderNo, List<TrackPoint> trackPoints, int duration) {
+    public Order ship(String orderNo, List<TrackPoint> trackPoints, int duration, Long vehicleId) {
         Order order = getOrderOrThrow(orderNo);
         String fromStatus = order.getStatus();
 
         if (!canTransition(fromStatus, STATUS_SHIPPING)) {
             throw new IllegalStateException(
                 String.format("订单 %s 当前状态为 %s，不允许发货操作", orderNo, fromStatus));
+        }
+
+        if (vehicleId == null) {
+            throw new IllegalArgumentException("请选择货车");
+        }
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+            .orElseThrow(() -> new IllegalArgumentException("车辆不存在"));
+        if (!Boolean.TRUE.equals(vehicle.getEnabled())) {
+            throw new IllegalStateException("该车辆已停用，无法派单");
+        }
+        if (orderService.existsByVehicleIdAndStatus(vehicleId, STATUS_SHIPPING)) {
+            throw new IllegalStateException("该车辆已被其他运输中订单占用，请选择其他车辆");
         }
 
         // 发货时自动将起点标记为已到达
@@ -93,21 +105,32 @@ public class OrderStatusService {
                 java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
 
+        int limit = vehicle.getSpeedLimitKmh();
+        int initialSpeed;
+        if (limit <= 1) {
+            initialSpeed = 1;
+        } else {
+            initialSpeed = 1 + new Random().nextInt(limit - 1);
+        }
+
         order.setStatus(STATUS_SHIPPING);
         order.setShipTime(LocalDateTime.now());
         order.setTrackingNo(generateTrackingNo(order.getExpressCompany()));
         order.setTrackPointsJson(orderService.serializeTrackPoints(trackPoints));
         order.setDuration(duration);
+        order.setVehicleId(vehicleId);
+        order.setCurrentSpeedKmh(initialSpeed);
 
-        // 持久化订单变更
+        vehicle.setOnline(true);
+        vehicleRepository.save(vehicle);
+
         orderService.updateOrder(order);
 
-        // 记录操作日志
         saveOperationLog(orderNo, ACTION_SHIP, fromStatus, STATUS_SHIPPING);
 
-        log.info("订单 {} 发货成功，运单号 {}，状态从 {} 变更为 {}", 
-            orderNo, order.getTrackingNo(), fromStatus, STATUS_SHIPPING);
-        return order;
+        log.info("订单 {} 发货成功，运单号 {}，车辆 {}，状态从 {} 变更为 {}",
+            orderNo, order.getTrackingNo(), vehicle.getPlateNumber(), fromStatus, STATUS_SHIPPING);
+        return orderService.getOrder(orderNo);
     }
 
     /**
@@ -159,7 +182,7 @@ public class OrderStatusService {
         saveOperationLog(orderNo, ACTION_RECEIVE, fromStatus, STATUS_COMPLETED);
 
         log.info("订单 {} 签收成功，状态从 {} 变更为 {}", orderNo, fromStatus, STATUS_COMPLETED);
-        return order;
+        return orderService.getOrder(orderNo);
     }
 
     /**
@@ -203,7 +226,7 @@ public class OrderStatusService {
         saveOperationLog(orderNo, ACTION_CANCEL, fromStatus, STATUS_CANCELLED);
 
         log.info("订单 {} 取消成功，状态从 {} 变更为 {}", orderNo, fromStatus, STATUS_CANCELLED);
-        return order;
+        return orderService.getOrder(orderNo);
     }
 
 

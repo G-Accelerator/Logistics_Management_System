@@ -3,6 +3,7 @@ declare const AMap: {
   Map: new (container: string | HTMLElement, options?: any) => any;
   Marker: new (options?: any) => any;
   Polyline: new (options?: any) => any;
+  LngLat: new (lng: number, lat: number) => any;
   InfoWindow: new (options?: any) => any;
   Icon: new (options?: any) => any;
   Size: new (width: number, height: number) => any;

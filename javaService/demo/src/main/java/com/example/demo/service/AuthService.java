@@ -1,13 +1,18 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.ChangePasswordRequest;
+import com.example.demo.dto.ChangeUsernameRequest;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.LoginResponse;
-import com.example.demo.entity.User;
+import com.example.demo.dto.UpdateProfileRequest;
+import com.example.demo.entity.UserAccount;
+import com.example.demo.repository.UserAccountRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
@@ -19,20 +24,24 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class AuthService {
 
-    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+    private static final Logger VERIFY_LOG =
+        LoggerFactory.getLogger("com.example.demo.auth.verifycode");
 
-    // 模拟用户数据存储
-    private static final Map<String, User> USERS = new HashMap<>();
-    // 模拟token存储
-    private static final Map<String, User> TOKEN_STORE = new HashMap<>();
-    // 买家手机号与用户映射
-    private static final Map<String, User> PHONE_USERS = new HashMap<>();
-    // 验证码存储 (手机号 -> 验证码信息)
-    private static final ConcurrentHashMap<String, VerifyCodeInfo> VERIFY_CODES = new ConcurrentHashMap<>();
-    // 验证码有效期（毫秒）
-    private static final long CODE_EXPIRE_TIME =  20 * 1000; // 1分钟
+    private final UserAccountRepository userAccountRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    // 验证码信息类
+    private final Map<String, AuthPrincipal> tokenStore = new ConcurrentHashMap<>();
+    private final Map<String, AuthPrincipal> phoneUsers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, VerifyCodeInfo> verifyCodes = new ConcurrentHashMap<>();
+
+    /** 验证码有效期：2 分钟 */
+    private static final long CODE_EXPIRE_TIME = 2 * 60 * 1000L;
+
+    public AuthService(UserAccountRepository userAccountRepository, PasswordEncoder passwordEncoder) {
+        this.userAccountRepository = userAccountRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
     private static class VerifyCodeInfo {
         String code;
         long createTime;
@@ -47,138 +56,236 @@ public class AuthService {
         }
     }
 
-    static {
-        // 初始化默认用户
-        USERS.put("admin", new User(1L, "admin", "123456", "管理员", "", "admin"));
-        USERS.put("user", new User(2L, "user", "123456", "普通用户", "", "user"));
-    }
-
-    /**
-     * 发送验证码
-     */
     public void sendVerifyCode(String phone) {
+        phone = normalizePhone(phone);
         if (phone == null || !phone.matches("^1[3-9]\\d{9}$")) {
             throw new RuntimeException("手机号格式不正确");
         }
-        
-        // 生成6位验证码
         String code = String.format("%06d", new Random().nextInt(1000000));
-        VERIFY_CODES.put(phone, new VerifyCodeInfo(code));
-        
-        // 打印验证码到控制台
-        log.info("========================================");
-        log.info("手机号 {} 的验证码: {}（2分钟内有效）", phone, code);
-        log.info("========================================");
+        verifyCodes.put(phone, new VerifyCodeInfo(code));
+        VERIFY_LOG.info("[登录验证码] 手机号 {} 验证码 {}（2分钟内有效）", phone, code);
     }
 
-    /**
-     * 验证验证码
-     */
+    private static String normalizePhone(String phone) {
+        return phone != null ? phone.trim() : null;
+    }
+
+    private static String normalizeCode(String code) {
+        return code != null ? code.trim() : "";
+    }
+
     private boolean verifyCode(String phone, String code) {
-        VerifyCodeInfo info = VERIFY_CODES.get(phone);
+        phone = normalizePhone(phone);
+        code = normalizeCode(code);
+        VerifyCodeInfo info = verifyCodes.get(phone);
         if (info != null && !info.isExpired() && info.code.equals(code)) {
-            VERIFY_CODES.remove(phone); // 验证成功后删除
+            verifyCodes.remove(phone);
             return true;
         }
         if (info != null && info.isExpired()) {
-            VERIFY_CODES.remove(phone); // 清理过期验证码
+            verifyCodes.remove(phone);
         }
         return false;
     }
 
-    /**
-     * 用户登录
-     */
     public LoginResponse login(LoginRequest request) {
-        String username = request.getUsername();
+        String username = request.getUsername() != null ? request.getUsername().trim() : "";
         String password = request.getPassword();
 
-        // 验证用户名和密码
-        User user = USERS.get(username);
-        if (user == null || !user.getPassword().equals(password)) {
+        if (username.isEmpty() || password == null || password.isEmpty()) {
             throw new RuntimeException("用户名或密码错误");
         }
 
-        // 生成token
+        UserAccount account = userAccountRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用户名或密码错误"));
+
+        if (!"admin".equals(account.getRole())) {
+            throw new RuntimeException("用户名或密码错误");
+        }
+        if (Boolean.FALSE.equals(account.getEnabled())) {
+            throw new RuntimeException("账号已禁用");
+        }
+        if (!passwordEncoder.matches(password, account.getPasswordHash())) {
+            throw new RuntimeException("用户名或密码错误");
+        }
+
+        AuthPrincipal principal = toPrincipal(account);
         String token = UUID.randomUUID().toString().replace("-", "");
-        TOKEN_STORE.put(token, user);
+        tokenStore.put(token, principal);
 
-        // 构建响应
-        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-            user.getId().toString(),
-            user.getUsername(),
-            user.getNickname(),
-            user.getAvatar(),
-            user.getRole()
-        );
-
-        return new LoginResponse(token, userInfo);
+        return new LoginResponse(token, toUserInfo(principal));
     }
 
-    /**
-     * 买家/卖家手机号登录
-     */
     public LoginResponse loginByPhone(String phone, String code, String role) {
+        phone = normalizePhone(phone);
+        code = normalizeCode(code);
         if (phone == null || !phone.matches("^1[3-9]\\d{9}$")) {
             throw new RuntimeException("手机号格式不正确");
         }
-
-        // 验证验证码
         if (!verifyCode(phone, code)) {
             throw new RuntimeException("验证码错误或已过期");
         }
 
-        // 根据角色创建用户
         String userRole = "seller".equals(role) ? "seller" : "buyer";
         String nickname = "seller".equals(role) ? "卖家" : "买家";
-        
-        // 为该手机号创建或获取用户
         String userKey = userRole + "_" + phone;
-        User user = PHONE_USERS.computeIfAbsent(userKey, p -> {
-            long id = 1000L + PHONE_USERS.size();
-            return new User(id, userKey, "", nickname + phone.substring(7), "", userRole, phone);
+
+        AuthPrincipal principal = phoneUsers.computeIfAbsent(userKey, p -> {
+            long id = 1000L + phoneUsers.size();
+            return new AuthPrincipal(
+                    id,
+                    userKey,
+                    nickname + phone.substring(7),
+                    "",
+                    userRole,
+                    phone,
+                    false);
         });
 
-        // 生成token
         String token = UUID.randomUUID().toString().replace("-", "");
-        TOKEN_STORE.put(token, user);
+        tokenStore.put(token, principal);
 
-        // 构建响应
-        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-            user.getId().toString(),
-            user.getUsername(),
-            user.getNickname(),
-            user.getAvatar(),
-            user.getRole(),
-            phone
-        );
-
-        return new LoginResponse(token, userInfo);
+        return new LoginResponse(token, toUserInfo(principal));
     }
 
-    /**
-     * 用户登出
-     */
     public void logout(String token) {
-        TOKEN_STORE.remove(token);
+        tokenStore.remove(token);
     }
 
-    /**
-     * 根据token获取用户信息
-     */
     public LoginResponse.UserInfo getUserInfo(String token) {
-        User user = TOKEN_STORE.get(token);
-        if (user == null) {
-            throw new RuntimeException("token无效或已过期");
+        AuthPrincipal principal = requirePrincipal(token);
+        return toUserInfo(principal);
+    }
+
+    @Transactional
+    public LoginResponse.UserInfo updateProfile(String token, UpdateProfileRequest request) {
+        AuthPrincipal principal = requireAdminPrincipal(token);
+        UserAccount account = userAccountRepository.findById(principal.getId())
+                .orElseThrow(() -> new RuntimeException("账号不存在"));
+
+        String nickname = request.getNickname() != null ? request.getNickname().trim() : "";
+        if (nickname.isEmpty()) {
+            throw new RuntimeException("昵称不能为空");
+        }
+        if (nickname.length() > 64) {
+            throw new RuntimeException("昵称过长");
         }
 
+        account.setNickname(nickname);
+        userAccountRepository.save(account);
+
+        principal.setNickname(nickname);
+        syncTokenPrincipal(token, principal);
+        return toUserInfo(principal);
+    }
+
+    @Transactional
+    public LoginResponse.UserInfo changeUsername(String token, ChangeUsernameRequest request) {
+        AuthPrincipal principal = requireAdminPrincipal(token);
+        UserAccount account = userAccountRepository.findById(principal.getId())
+                .orElseThrow(() -> new RuntimeException("账号不存在"));
+
+        String newUsername = request.getNewUsername() != null ? request.getNewUsername().trim() : "";
+        String password = request.getPassword();
+
+        if (newUsername.isEmpty()) {
+            throw new RuntimeException("新用户名不能为空");
+        }
+        if (newUsername.length() < 3 || newUsername.length() > 32) {
+            throw new RuntimeException("用户名长度应为 3–32 个字符");
+        }
+        if (!newUsername.matches("^[a-zA-Z0-9_]+$")) {
+            throw new RuntimeException("用户名仅支持字母、数字和下划线");
+        }
+        if (password == null || password.isEmpty()) {
+            throw new RuntimeException("请输入当前密码以确认身份");
+        }
+        if (!passwordEncoder.matches(password, account.getPasswordHash())) {
+            throw new RuntimeException("当前密码错误");
+        }
+        if (userAccountRepository.existsByUsernameAndIdNot(newUsername, account.getId())) {
+            throw new RuntimeException("用户名已被占用");
+        }
+
+        account.setUsername(newUsername);
+        userAccountRepository.save(account);
+
+        AuthPrincipal updated = new AuthPrincipal(
+                account.getId(),
+                newUsername,
+                account.getNickname(),
+                account.getAvatar(),
+                account.getRole(),
+                account.getPhone(),
+                true);
+        tokenStore.put(token, updated);
+        return toUserInfo(updated);
+    }
+
+    @Transactional
+    public void changePassword(String token, ChangePasswordRequest request) {
+        AuthPrincipal principal = requireAdminPrincipal(token);
+        UserAccount account = userAccountRepository.findById(principal.getId())
+                .orElseThrow(() -> new RuntimeException("账号不存在"));
+
+        String oldPassword = request.getOldPassword();
+        String newPassword = request.getNewPassword();
+
+        if (oldPassword == null || oldPassword.isEmpty()) {
+            throw new RuntimeException("请输入原密码");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new RuntimeException("新密码至少 6 位");
+        }
+        if (!passwordEncoder.matches(oldPassword, account.getPasswordHash())) {
+            throw new RuntimeException("原密码错误");
+        }
+        if (passwordEncoder.matches(newPassword, account.getPasswordHash())) {
+            throw new RuntimeException("新密码不能与原密码相同");
+        }
+
+        account.setPasswordHash(passwordEncoder.encode(newPassword));
+        userAccountRepository.save(account);
+    }
+
+    private AuthPrincipal requirePrincipal(String token) {
+        AuthPrincipal principal = tokenStore.get(token);
+        if (principal == null) {
+            throw new RuntimeException("token无效或已过期");
+        }
+        return principal;
+    }
+
+    private AuthPrincipal requireAdminPrincipal(String token) {
+        AuthPrincipal principal = requirePrincipal(token);
+        if (!principal.isAdminAccount()) {
+            throw new RuntimeException("仅管理员账号可修改");
+        }
+        return principal;
+    }
+
+    private void syncTokenPrincipal(String token, AuthPrincipal principal) {
+        tokenStore.put(token, principal);
+    }
+
+    private AuthPrincipal toPrincipal(UserAccount account) {
+        return new AuthPrincipal(
+                account.getId(),
+                account.getUsername(),
+                account.getNickname(),
+                account.getAvatar(),
+                account.getRole(),
+                account.getPhone(),
+                true);
+    }
+
+    private LoginResponse.UserInfo toUserInfo(AuthPrincipal principal) {
         return new LoginResponse.UserInfo(
-            user.getId().toString(),
-            user.getUsername(),
-            user.getNickname(),
-            user.getAvatar(),
-            user.getRole(),
-            user.getPhone()
-        );
+                principal.getId().toString(),
+                principal.getUsername(),
+                principal.getNickname(),
+                principal.getAvatar(),
+                principal.getRole(),
+                principal.getPhone());
     }
 }

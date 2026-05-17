@@ -7,7 +7,7 @@
       :load-data="loadData"
       :show-toolbar="true"
       :toolbar-left="renderToolbarLeft"
-      :operation-width="280"
+      :operation-width="300"
       @selection-change="handleSelectionChange"
     >
       <template #operation="{ row }">
@@ -31,9 +31,9 @@
           v-if="row.status === 'shipping'"
           type="warning"
           link
-          @click="handleStationManage(row)"
+          @click="handleTransportManage(row)"
         >
-          站点管理
+          在途管控
         </el-button>
         <el-button
           v-if="row.status === 'pending' || row.status === 'shipping'"
@@ -83,92 +83,152 @@
       </template>
     </el-dialog>
 
-    <!-- 站点管理弹窗 -->
+    <!-- 在途管控：车辆/车速/在线 + 站点进度 -->
     <el-dialog
-      v-model="stationDialogVisible"
-      :title="`站点管理 - ${currentOrderNo}`"
-      width="800px"
+      v-model="transportDialogVisible"
+      :title="`在途管控 - ${currentOrderNo}`"
+      width="920px"
       destroy-on-close
+      class="transport-dialog"
+      @closed="onTransportClosed"
     >
-      <div
-        class="station-toolbar"
-        style="
-          margin-bottom: 16px;
-          display: flex;
-          gap: 12px;
-          align-items: center;
-        "
-      >
-        <el-button
-          type="primary"
-          :disabled="allStationsArrived"
-          :loading="batchLoading"
-          @click="handleMarkAllArrived"
-        >
-          全部到达
-        </el-button>
-        <el-select
-          v-model="targetStationIndex"
-          placeholder="到达至指定站点"
-          style="width: 200px"
-          :disabled="allStationsArrived"
-          @change="handleMarkArrivedTo"
-        >
-          <el-option
-            v-for="station in pendingStations"
-            :key="station.index"
-            :label="`${station.index + 1}. ${station.location}`"
-            :value="station.index"
-          />
-        </el-select>
-      </div>
-      <el-table :data="stationList" v-loading="stationLoading" stripe>
-        <el-table-column label="序号" width="70" align="center">
-          <template #default="{ row }">
-            {{ row.index + 1 }}
-          </template>
-        </el-table-column>
-        <el-table-column
-          prop="location"
-          label="站点位置"
-          min-width="200"
-          show-overflow-tooltip
-        />
-        <el-table-column label="状态" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag
-              :type="row.status === 'arrived' ? 'success' : 'warning'"
-              size="small"
-            >
-              {{ row.status === "arrived" ? "已到达" : "待到达" }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="arrivalTime" label="到达时间" width="170">
-          <template #default="{ row }">
-            {{ row.arrivalTime || "-" }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="120" align="center">
-          <template #default="{ row }">
+      <el-tabs v-model="transportActiveTab" class="transport-tabs">
+        <el-tab-pane label="车辆与车速" name="vehicle">
+          <div v-if="transportOrder?.vehicleId" class="vehicle-pane">
+            <el-form label-width="120px">
+              <el-form-item label="车牌">
+                <span>{{ transportOrder.vehiclePlateNumber || "-" }}</span>
+              </el-form-item>
+              <el-form-item label="车辆类型">
+                <span>{{ transportOrder.vehicleType || "-" }}</span>
+              </el-form-item>
+              <el-form-item label="驾驶员">
+                <span>{{
+                  transportOrder.vehicleDriverName || "-"
+                }}</span>
+              </el-form-item>
+              <el-form-item label="联系电话">
+                <span>{{
+                  transportOrder.vehicleDriverPhone || "-"
+                }}</span>
+              </el-form-item>
+              <el-form-item label="车辆在线">
+                <el-switch
+                  v-model="vehicleOnlineForm"
+                  active-text="在线"
+                  inactive-text="离线"
+                />
+              </el-form-item>
+              <el-form-item label="当前车速">
+                <el-input-number
+                  v-model="speedForm"
+                  :min="1"
+                  :max="300"
+                  controls-position="right"
+                  style="width: 200px"
+                />
+                <span class="speed-unit">km/h</span>
+              </el-form-item>
+            </el-form>
             <el-button
-              v-if="row.status === 'pending' && canMarkStation(row.index)"
               type="primary"
-              size="small"
-              :loading="markingIndex === row.index"
-              @click="handleMarkStationArrived(row)"
+              :loading="vehicleSaveLoading"
+              @click="submitTransportVehicle"
             >
-              标记到达
+              保存车辆设置
             </el-button>
-            <span v-else-if="row.status === 'arrived'" style="color: #67c23a"
-              >✓</span
+          </div>
+          <el-alert
+            v-else
+            type="info"
+            :closable="false"
+            show-icon
+            title="本运单未绑定车辆"
+            description="无法在此调整车速与在线状态。请在「站点进度」中维护站点到达情况。"
+          />
+        </el-tab-pane>
+        <el-tab-pane label="站点进度" name="stations">
+          <div
+            class="station-toolbar"
+            style="
+              margin-bottom: 16px;
+              display: flex;
+              gap: 12px;
+              align-items: center;
+            "
+          >
+            <el-button
+              type="primary"
+              :disabled="allStationsArrived"
+              :loading="batchLoading"
+              @click="handleMarkAllArrived"
             >
-            <span v-else style="color: #909399">-</span>
-          </template>
-        </el-table-column>
-      </el-table>
+              全部到达
+            </el-button>
+            <el-select
+              v-model="targetStationIndex"
+              placeholder="到达至指定站点"
+              style="width: 220px"
+              :disabled="allStationsArrived"
+              @change="handleMarkArrivedTo"
+            >
+              <el-option
+                v-for="station in pendingStations"
+                :key="station.index"
+                :label="`${station.index + 1}. ${station.location}`"
+                :value="station.index"
+              />
+            </el-select>
+          </div>
+          <el-table :data="stationList" v-loading="stationLoading" stripe>
+            <el-table-column label="序号" width="70" align="center">
+              <template #default="{ row }">
+                {{ row.index + 1 }}
+              </template>
+            </el-table-column>
+            <el-table-column
+              prop="location"
+              label="站点位置"
+              min-width="200"
+              show-overflow-tooltip
+            />
+            <el-table-column label="状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag
+                  :type="row.status === 'arrived' ? 'success' : 'warning'"
+                  size="small"
+                >
+                  {{ row.status === "arrived" ? "已到达" : "待到达" }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="arrivalTime" label="到达时间" width="170">
+              <template #default="{ row }">
+                {{ row.arrivalTime || "-" }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="120" align="center">
+              <template #default="{ row }">
+                <el-button
+                  v-if="row.status === 'pending' && canMarkStation(row.index)"
+                  type="primary"
+                  size="small"
+                  :loading="markingIndex === row.index"
+                  @click="handleMarkStationArrived(row)"
+                >
+                  标记到达
+                </el-button>
+                <span v-else-if="row.status === 'arrived'" style="color: #67c23a"
+                  >✓</span
+                >
+                <span v-else style="color: #909399">-</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
       <template #footer>
-        <el-button @click="stationDialogVisible = false">关闭</el-button>
+        <el-button @click="transportDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
 
@@ -199,6 +259,7 @@ import {
   markStationArrived,
   markAllStationsArrived,
   markStationsArrivedTo,
+  updateOrderTransportControl,
 } from "../../../api/order";
 import type {
   OperationLog,
@@ -213,7 +274,12 @@ const logLoading = ref(false);
 const operationLogs = ref<OperationLog[]>([]);
 
 // 站点管理状态
-const stationDialogVisible = ref(false);
+const transportDialogVisible = ref(false);
+const transportActiveTab = ref<"vehicle" | "stations">("vehicle");
+const transportOrder = ref<Order | null>(null);
+const speedForm = ref(60);
+const vehicleOnlineForm = ref(true);
+const vehicleSaveLoading = ref(false);
 const stationLoading = ref(false);
 const stationList = ref<StationInfo[]>([]);
 const currentOrderNo = ref("");
@@ -395,6 +461,45 @@ const handleShipSuccess = () => {
   tableRef.value?.refresh();
 };
 
+const handleTransportManage = async (row: any) => {
+  currentOrderNo.value = row.orderNo;
+  transportOrder.value = row as Order;
+  transportActiveTab.value = row.vehicleId ? "vehicle" : "stations";
+  speedForm.value =
+    row.currentSpeedKmh != null ? row.currentSpeedKmh : 60;
+  vehicleOnlineForm.value = row.vehicleOnline !== false;
+  transportDialogVisible.value = true;
+  targetStationIndex.value = null;
+  await loadStationStatus();
+};
+
+const onTransportClosed = () => {
+  transportOrder.value = null;
+  currentOrderNo.value = "";
+};
+
+const submitTransportVehicle = async () => {
+  const o = transportOrder.value;
+  if (!o?.orderNo || !o.vehicleId) return;
+  vehicleSaveLoading.value = true;
+  try {
+    const updated = await updateOrderTransportControl(o.orderNo, {
+      currentSpeedKmh: speedForm.value,
+      vehicleOnline: vehicleOnlineForm.value,
+    });
+    transportOrder.value = updated;
+    speedForm.value =
+      updated.currentSpeedKmh != null ? updated.currentSpeedKmh : 60;
+    vehicleOnlineForm.value = updated.vehicleOnline !== false;
+    ElMessage.success("车辆设置已保存");
+    tableRef.value?.refresh();
+  } catch {
+    /* 拦截器提示 */
+  } finally {
+    vehicleSaveLoading.value = false;
+  }
+};
+
 // 单个签收
 const handleReceive = async (row: any) => {
   try {
@@ -477,14 +582,6 @@ const canMarkStation = (index: number): boolean => {
   if (index === 0) return true;
   const prevStation = stationList.value.find((s) => s.index === index - 1);
   return prevStation?.status === "arrived";
-};
-
-// 打开站点管理弹窗
-const handleStationManage = async (row: any) => {
-  currentOrderNo.value = row.orderNo;
-  stationDialogVisible.value = true;
-  targetStationIndex.value = null;
-  await loadStationStatus();
 };
 
 // 加载站点状态
@@ -717,3 +814,20 @@ onMounted(() => {
   // 数据由 ExpressCompanySelect 组件自动加载
 });
 </script>
+
+<style scoped>
+.speed-unit {
+  margin-left: 8px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.transport-tabs {
+  margin-top: -8px;
+}
+
+.vehicle-pane {
+  padding-top: 8px;
+  max-width: 520px;
+}
+</style>

@@ -148,10 +148,14 @@
       <el-table
         v-loading="loading"
         :data="tableData"
+        :class="tableClass"
         :border="border"
         :stripe="stripe"
         :height="height"
         :max-height="maxHeight"
+        :row-key="rowKey"
+        :row-class-name="rowClassName"
+        :empty-text="emptyText"
         @selection-change="handleSelectionChange"
       >
         <!-- 多选列 -->
@@ -214,18 +218,21 @@
           align="center"
         >
           <template #default="scope">
-            <slot name="operation" :row="scope.row" :$index="scope.$index">
-              <template v-for="btn in operations" :key="btn.label">
-                <el-button
-                  v-if="!btn.show || btn.show(scope.row)"
-                  :type="btn.type || 'primary'"
-                  link
-                  @click="btn.handler(scope.row, scope.$index)"
-                >
-                  {{ btn.label }}
-                </el-button>
-              </template>
-            </slot>
+            <div class="table-operation">
+              <slot name="operation" :row="scope.row" :$index="scope.$index">
+                <template v-for="btn in operations" :key="btn.label">
+                  <el-button
+                    v-if="!btn.show || btn.show(scope.row)"
+                    :type="btn.type || 'primary'"
+                    link
+                    size="small"
+                    @click="btn.handler(scope.row, scope.$index)"
+                  >
+                    {{ btn.label }}
+                  </el-button>
+                </template>
+              </slot>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -279,6 +286,10 @@ interface Props {
   pageSizes?: number[];
   initialPage?: number;
   initialPageSize?: number;
+  rowKey?: string | ((row: any) => string);
+  rowClassName?: (data: { row: any; rowIndex: number }) => string;
+  emptyText?: string;
+  tableClass?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -297,6 +308,7 @@ const props = withDefaults(defineProps<Props>(), {
   pageSizes: () => [10, 20, 50, 100],
   initialPage: 1,
   initialPageSize: 10,
+  emptyText: "暂无数据",
 });
 
 const emit = defineEmits<{
@@ -518,5 +530,25 @@ onMounted(() => {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+
+.table-operation {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  max-width: 100%;
+}
+
+.table-operation :deep(.el-button.is-link) {
+  margin: 0;
+  padding: 4px 4px;
+  height: auto;
+  white-space: nowrap;
+}
+
+.table-operation :deep(.el-button.is-link + .el-button.is-link) {
+  margin-left: 0;
 }
 </style>
