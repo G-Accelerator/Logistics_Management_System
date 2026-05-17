@@ -1,13 +1,5 @@
 <template>
   <div class="statistics-report">
-    <!-- 时间范围选择 -->
-    <div class="filter-bar">
-      <el-radio-group v-model="timeRange" @change="handleTimeRangeChange">
-        <el-radio-button :value="7">近7天</el-radio-button>
-        <el-radio-button :value="30">近30天</el-radio-button>
-      </el-radio-group>
-    </div>
-
     <!-- 概览卡片区域 -->
     <el-row :gutter="20" class="overview-cards">
       <el-col :xs="12" :sm="6">
@@ -68,9 +60,12 @@
       </el-col>
     </el-row>
 
-    <!-- 图表区域 - 第一行 -->
-    <el-row :gutter="20" class="chart-row">
-      <el-col :xs="24" :lg="14">
+    <el-tabs
+      v-model="activeChartTab"
+      class="chart-tabs"
+      @tab-change="onChartTabChange"
+    >
+      <el-tab-pane label="订单趋势" name="trend" lazy>
         <el-card class="chart-card">
           <template #header>
             <div class="chart-header">
@@ -78,47 +73,53 @@
                 <el-icon class="header-icon"><TrendCharts /></el-icon>
                 <span>订单趋势</span>
               </div>
+              <el-radio-group
+                v-model="timeRange"
+                size="small"
+                @change="handleTimeRangeChange"
+              >
+                <el-radio-button :value="7">近7天</el-radio-button>
+                <el-radio-button :value="30">近30天</el-radio-button>
+              </el-radio-group>
             </div>
           </template>
           <LineChart
             :x-data="trendData.dates"
             :y-data="trendData.counts"
             series-name="订单数"
-            height="320px"
+            height="400px"
             :loading="loading.trend"
           />
         </el-card>
-      </el-col>
-      <el-col :xs="24" :lg="10">
+      </el-tab-pane>
+
+      <el-tab-pane label="订单状态分布" name="status" lazy>
         <el-card class="chart-card">
           <template #header>
             <div class="chart-header">
               <div class="header-title">
-                <el-icon class="header-icon"><PieChart as any /></el-icon>
+                <el-icon class="header-icon"><PieChartIcon /></el-icon>
                 <span>订单状态分布</span>
               </div>
             </div>
           </template>
           <PieChart
             :data="statusDistributionData"
-            height="320px"
+            height="400px"
             ring
             :loading="loading.status"
             @click="handleStatusClick"
           />
         </el-card>
-      </el-col>
-    </el-row>
+      </el-tab-pane>
 
-    <!-- 图表区域 - 第二行 -->
-    <el-row :gutter="20" class="chart-row">
-      <el-col :xs="24" :lg="12">
+      <el-tab-pane label="热门城市 TOP10" name="cities" lazy>
         <el-card class="chart-card">
           <template #header>
             <div class="chart-header">
               <div class="header-title">
                 <el-icon class="header-icon"><Location /></el-icon>
-                <span>热门城市TOP10</span>
+                <span>热门城市 TOP10</span>
               </div>
               <el-radio-group
                 v-model="cityType"
@@ -134,13 +135,14 @@
             :x-data="topCitiesData.labels"
             :y-data="topCitiesData.values"
             series-name="订单数"
-            height="320px"
+            height="400px"
             bar-color="#10b981"
             :loading="loading.cities"
           />
         </el-card>
-      </el-col>
-      <el-col :xs="24" :lg="12">
+      </el-tab-pane>
+
+      <el-tab-pane label="快递公司分布" name="express" lazy>
         <el-card class="chart-card">
           <template #header>
             <div class="chart-header">
@@ -154,18 +156,18 @@
             :x-data="expressCompaniesData.labels"
             :y-data="expressCompaniesData.values"
             series-name="订单数"
-            height="320px"
+            height="400px"
             bar-color="#0ea5e9"
             :loading="loading.express"
           />
         </el-card>
-      </el-col>
-    </el-row>
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, nextTick } from "vue";
 import { ElMessage } from "element-plus";
 import {
   Document,
@@ -196,6 +198,7 @@ import {
 
 const timeRange = ref(7);
 const cityType = ref<"origin" | "destination">("origin");
+const activeChartTab = ref("trend");
 
 const loading = reactive({
   overview: false,
@@ -290,6 +293,13 @@ async function fetchExpressCompanies() {
 function handleTimeRangeChange() {
   fetchTrend();
 }
+
+function onChartTabChange() {
+  nextTick(() => {
+    window.dispatchEvent(new Event("resize"));
+  });
+}
+
 function handleStatusClick(data: { name: string; value: number }) {
   ElMessage.info(`${data.name}: ${data.value} 单`);
 }
@@ -308,11 +318,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.filter-bar {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .overview-cards {
@@ -405,13 +410,20 @@ onMounted(() => {
   color: var(--danger-color);
 }
 
-.chart-row {
-  margin-bottom: 0;
+.chart-tabs :deep(.el-tabs__header) {
+  margin-bottom: 16px;
+}
+
+.chart-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--primary-color);
+}
+
+.chart-tabs :deep(.el-tabs__active-bar) {
+  background-color: var(--primary-color);
 }
 
 .chart-card {
   border-radius: var(--radius-lg);
-  margin-bottom: 20px;
 }
 
 .chart-header {

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import type { RouteRecordRaw } from "vue-router";
+import { ElMessage } from "element-plus";
 import { constantRoutes, asyncRoutes, filterRoutesByRole } from "./routes";
 import type { UserRole } from "./routes";
 
@@ -29,6 +30,9 @@ export function getAccessibleRoutes() {
 
 /** 登录后各角色均可访问的公共页（不挂在带 redirect 的菜单树下） */
 const AUTH_COMMON_PATHS = ["/dashboard", "/profile"];
+
+/** 无权限或路由不存在时统一回到首页 */
+const HOME_PATH = "/dashboard";
 
 function normalizeRoutePath(routePath: string, parentPath = ""): string {
   if (routePath.startsWith("/")) return routePath;
@@ -81,18 +85,6 @@ function canAccessRoute(path: string, role: UserRole): boolean {
   return checkRoutes(accessibleRoutes);
 }
 
-// 获取角色默认首页
-function getRoleDefaultPage(role: UserRole): string {
-  switch (role) {
-    case "buyer":
-      return "/buyer/orders";
-    case "seller":
-      return "/seller/shipment";
-    default:
-      return "/dashboard";
-  }
-}
-
 // 路由守卫
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem("token");
@@ -110,13 +102,19 @@ router.beforeEach((to, _from, next) => {
     return;
   }
 
-  // 获取当前角色
+  // 访问不存在的路由
+  if (to.matched.length === 0) {
+    ElMessage.warning("页面不存在，已返回首页");
+    next({ path: HOME_PATH, replace: true });
+    return;
+  }
+
   const role = getCurrentRole();
 
-  // 检查路由访问权限
+  // 无权限访问
   if (!canAccessRoute(to.path, role)) {
-    // 无权限，跳转到角色默认页
-    next(getRoleDefaultPage(role));
+    ElMessage.warning("无权限访问该页面，已返回首页");
+    next({ path: HOME_PATH, replace: true });
     return;
   }
 

@@ -157,28 +157,38 @@ export const asyncRoutes: AppRouteRecordRaw[] = [
       },
     ],
   },
-  // 系统设置 - 仅管理员可见
-  {
-    path: "/settings",
+   // 用户管理 - 仅管理员可见（一级菜单）
+   {
+    path: "/user-management",
     component: () => import("../../layouts/MainLayout.vue"),
-    redirect: "/settings/system",
-    meta: { title: "系统设置", icon: "Tools", roles: ["admin"] },
+    redirect: { name: "UserSettings" },
+    meta: { title: "用户管理", icon: "User", roles: ["admin"] },
     children: [
       {
-        path: "/settings/system",
-        name: "SystemSettings",
-        component: () =>
-          import("../../views/settings/SystemSettings/index.vue"),
-        meta: { title: "系统配置", icon: "Setting" },
-      },
-      {
-        path: "/settings/user",
+        path: "",
         name: "UserSettings",
         component: () => import("../../views/settings/UserSettings/index.vue"),
         meta: { title: "用户管理", icon: "User" },
       },
     ],
   },
+  // 系统配置 - 仅管理员可见（一级菜单）
+  {
+    path: "/system-config",
+    component: () => import("../../layouts/MainLayout.vue"),
+    redirect: { name: "SystemSettings" },
+    meta: { title: "系统配置", icon: "Setting", roles: ["admin"] },
+    children: [
+      {
+        path: "",
+        name: "SystemSettings",
+        component: () =>
+          import("../../views/settings/SystemSettings/index.vue"),
+        meta: { title: "系统配置", icon: "Setting" },
+      },
+    ],
+  },
+ 
 ];
 
 // 根据角色过滤路由
