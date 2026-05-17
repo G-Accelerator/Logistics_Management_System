@@ -117,28 +117,28 @@ public class AuthService {
     }
 
     public LoginResponse loginByPhone(String phone, String code, String role) {
-        phone = normalizePhone(phone);
-        code = normalizeCode(code);
-        if (phone == null || !phone.matches("^1[3-9]\\d{9}$")) {
+        final String normalizedPhone = normalizePhone(phone);
+        final String normalizedCode = normalizeCode(code);
+        if (normalizedPhone == null || !normalizedPhone.matches("^1[3-9]\\d{9}$")) {
             throw new RuntimeException("手机号格式不正确");
         }
-        if (!verifyCode(phone, code)) {
+        if (!verifyCode(normalizedPhone, normalizedCode)) {
             throw new RuntimeException("验证码错误或已过期");
         }
 
-        String userRole = "seller".equals(role) ? "seller" : "buyer";
-        String nickname = "seller".equals(role) ? "卖家" : "买家";
-        String userKey = userRole + "_" + phone;
+        final String userRole = "seller".equals(role) ? "seller" : "buyer";
+        final String nickname = "seller".equals(role) ? "卖家" : "买家";
+        final String userKey = userRole + "_" + normalizedPhone;
 
         AuthPrincipal principal = phoneUsers.computeIfAbsent(userKey, p -> {
             long id = 1000L + phoneUsers.size();
             return new AuthPrincipal(
                     id,
                     userKey,
-                    nickname + phone.substring(7),
+                    nickname + normalizedPhone.substring(7),
                     "",
                     userRole,
-                    phone,
+                    normalizedPhone,
                     false);
         });
 

@@ -11,7 +11,7 @@ $Root = $Root.TrimEnd('\', '/')
 
 if ($Kind -eq "backend") {
     $workDir = Join-Path $Root "javaService\demo"
-    $innerCmd = "title LMS-Backend & call mvnw.cmd spring-boot:run"
+    $innerCmd = "chcp 65001 >nul & title LMS-Backend & call mvnw.cmd spring-boot:run"
     $pidFile = Join-Path $Root ".dev-backend.pid"
     $windowTitle = "LMS-Backend"
 } else {
